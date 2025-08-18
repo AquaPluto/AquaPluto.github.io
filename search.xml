@@ -209,7 +209,7 @@
 </li>
 </ul>
 <h1 id="2-远程连接"><a href="#2-远程连接" class="headerlink" title="2 远程连接"></a>2 远程连接</h1><h2 id="2-1-Windows"><a href="#2-1-Windows" class="headerlink" title="2.1 Windows"></a>2.1 Windows</h2><p>（1）打开Windows命令行（cmd)</p>
-<p>（2）输入ssh <a href="mailto:&#114;&#x6f;&#111;&#116;&#x40;&#x31;&#48;&#46;&#x30;&#x2e;&#48;&#x2e;&#49;&#x33;&#49;">root@10.0.0.131</a></p>
+<p>（2）输入ssh <a href="mailto:&#114;&#111;&#111;&#116;&#64;&#x31;&#48;&#46;&#48;&#x2e;&#48;&#46;&#49;&#51;&#x31;">root@10.0.0.131</a></p>
 <p>（3）输入Linux账户密码</p>
 <h2 id="2-2-Ubuntu和Debian"><a href="#2-2-Ubuntu和Debian" class="headerlink" title="2.2 Ubuntu和Debian"></a>2.2 Ubuntu和Debian</h2><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> -i</span><br><span class="line">passwd root</span><br><span class="line">sed -i <span class="string">&#x27;/PermitRootLogin/c PermitRootLogin yes&#x27;</span> /etc/ssh/sshd_config</span><br><span class="line">systemctl restart sshd（如果出现错误，解决方法如下）</span><br><span class="line"></span><br><span class="line">1 apt purge -y openssh-server</span><br><span class="line">2 apt install -y openssh-server</span><br><span class="line">3 systemctl strat sshd</span><br></pre></td></tr></table></figure>
 

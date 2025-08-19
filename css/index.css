@@ -3972,7 +3972,7 @@ figure.highlight pre .javascript .function {
   padding: 0;
   padding-left: 1rem;
   width: max-content;
-  background-color: transparent;
+  background-color: var(--sidebar-bg);
   -webkit-animation: sub_menus 0.3s 0.1s ease both;
   -moz-animation: sub_menus 0.3s 0.1s ease both;
   -o-animation: sub_menus 0.3s 0.1s ease both;

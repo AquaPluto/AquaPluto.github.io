@@ -3690,7 +3690,7 @@ figure.highlight pre .javascript .function {
 #page-header.not-top-img #nav a,
 #page-header.not-top-img #nav span.site-page,
 #page-header.not-top-img #nav .site-name {
-  color: var(--white) !important;
+  color: var(--font-color);
   text-shadow: none;
 }
 #page-header.nav-fixed #nav {
@@ -3944,10 +3944,10 @@ figure.highlight pre .javascript .function {
 #nav .menus_items .menus_item {
   position: relative;
   display: inline-block;
-  padding: 0 14px 0 14px;
+  padding: 0 0 0 14px;
 }
-#nav .menus_items .menus_item:hover .menus_item_child .menus_item_child:hover {
-  display: block !important;
+#nav .menus_items .menus_item:hover .menus_item_child {
+  display: block;
 }
 #nav .menus_items .menus_item:hover > span > i:last-child {
   -webkit-transform: rotate(180deg);
@@ -3966,14 +3966,15 @@ figure.highlight pre .javascript .function {
 }
 #nav .menus_items .menus_item .menus_item_child {
   position: absolute;
-  left: 0;
-  top: 100%;
+  right: 0;
   display: none;
   margin-top: 8px;
   padding: 0;
   padding-left: 1rem;
   width: max-content;
-  background-color: transparent;
+  background-color: var(--sidebar-bg);
+  -webkit-box-shadow: 0 5px 20px -4px rgba(0,0,0,0.5);
+  box-shadow: 0 5px 20px -4px rgba(0,0,0,0.5);
   -webkit-animation: sub_menus 0.3s 0.1s ease both;
   -moz-animation: sub_menus 0.3s 0.1s ease both;
   -o-animation: sub_menus 0.3s 0.1s ease both;
@@ -4008,30 +4009,6 @@ figure.highlight pre .javascript .function {
   padding: 8px 16px;
   width: 100%;
   color: var(--font-color) !important;
-  text-shadow: none !important;
-}
-#nav .menus_items .menus_item .menus_item_child.second-level {
-  position: absolute;
-  left: 100%;
-  top: 0;
-  display: none;
-  margin-top: 0;
-  padding: 0;
-  padding-left: 1rem;
-  width: max-content;
-  background-color: transparent;
-  -webkit-animation: sub_menus 0.3s 0.1s ease both;
-  -moz-animation: sub_menus 0.3s 0.1s ease both;
-  -o-animation: sub_menus 0.3s 0.1s ease both;
-  -ms-animation: sub_menus 0.3s 0.1s ease both;
-  animation: sub_menus 0.3s 0.1s ease both;
-  border-radius: 5px;
-}
-#nav .menus_items .menus_item .menus_item_child.second-level:before {
-  display: none;
-}
-#nav .menus_items .menus_item .menus_item_child.second-level a {
-  color: var(--white) !important;
   text-shadow: none !important;
 }
 #nav.hide-menu #toggle-menu {
@@ -4163,16 +4140,10 @@ figure.highlight pre .javascript .function {
   -o-transition: all 0.3s;
   -ms-transition: all 0.3s;
   transition: all 0.3s;
-  left: 490px;
+  left: 480px;
 }
 #nav #nav-right-container #search-button .search:hover {
   background: rgba(255,255,255,0.73);
-}
-#nav a,
-#nav span.site-page,
-#nav .menus_item_child a {
-  color: #fff !important;
-  text-shadow: none !important;
 }
 .loading-bg,
 #loading-box .loading-left-bg,

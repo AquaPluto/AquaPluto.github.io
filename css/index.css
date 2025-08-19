@@ -3946,10 +3946,12 @@ figure.highlight pre .javascript .function {
   display: inline-block;
   padding: 0 14px 0 14px;
 }
-#nav .menus_items .menus_item:hover .menus_item_child {
+#nav .menus_items .menus_item:hover .menus_item_child,
+#nav .menus_items .menus_item .menus_item_child:hover {
   display: block !important;
 }
-#nav .menus_items .menus_item:hover > span > i:last-child {
+#nav .menus_items .menus_item:hover .menus_item_child > span > i:last-child,
+#nav .menus_items .menus_item .menus_item_child:hover > span > i:last-child {
   -webkit-transform: rotate(180deg);
   -moz-transform: rotate(180deg);
   -o-transform: rotate(180deg);
@@ -3966,8 +3968,8 @@ figure.highlight pre .javascript .function {
 }
 #nav .menus_items .menus_item .menus_item_child {
   position: absolute;
-  left: 100%;
-  top: 0;
+  left: 0;
+  top: 100%;
   display: none;
   margin-top: 8px;
   padding: 0;

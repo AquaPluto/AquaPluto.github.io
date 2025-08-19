@@ -3972,9 +3972,7 @@ figure.highlight pre .javascript .function {
   padding: 0;
   padding-left: 1rem;
   width: max-content;
-  background-color: var(--sidebar-bg);
-  -webkit-box-shadow: 0 5px 20px -4px rgba(0,0,0,0.5);
-  box-shadow: 0 5px 20px -4px rgba(0,0,0,0.5);
+  background-color: transparent;
   -webkit-animation: sub_menus 0.3s 0.1s ease both;
   -moz-animation: sub_menus 0.3s 0.1s ease both;
   -o-animation: sub_menus 0.3s 0.1s ease both;
@@ -4140,7 +4138,7 @@ figure.highlight pre .javascript .function {
   -o-transition: all 0.3s;
   -ms-transition: all 0.3s;
   transition: all 0.3s;
-  left: 530px;
+  left: 520px;
 }
 #nav #nav-right-container #search-button .search:hover {
   background: rgba(255,255,255,0.73);

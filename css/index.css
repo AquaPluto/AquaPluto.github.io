@@ -3852,7 +3852,6 @@ figure.highlight pre .javascript .function {
   text-decoration: underline;
 }
 #nav {
-mobile()
   position: absolute;
   top: 0;
   z-index: 90;
@@ -4144,21 +4143,6 @@ mobile()
   -o-transform: translateY(10px);
   -ms-transform: translateY(10px);
   transform: translateY(10px);
-}
-.menus_item_child {
-  display: none;
-  background-color: transparent;
-  -webkit-box-shadow: none;
-  box-shadow: none;
-}
-.menus_item:hover > .menus_item_child {
-  display: block;
-}
-.menus_item_child li {
-  background-color: transparent;
-}
-.site-page.group:hover {
-  cursor: pointer;
 }
 .loading-bg,
 #loading-box .loading-left-bg,

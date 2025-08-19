@@ -4168,6 +4168,12 @@ figure.highlight pre .javascript .function {
 #nav #nav-right-container #search-button .search:hover {
   background: rgba(255,255,255,0.73);
 }
+#nav a,
+#nav span.site-page,
+#nav .menus_item_child a {
+  color: #fff !important;
+  text-shadow: none !important;
+}
 .loading-bg,
 #loading-box .loading-left-bg,
 #loading-box .loading-right-bg {

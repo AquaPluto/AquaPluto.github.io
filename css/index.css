@@ -4032,6 +4032,27 @@ figure.highlight pre .javascript .function {
 #nav .menus_items .menus_item .menus_item_child.second-level:before {
   display: none;
 }
+#nav .menus_items .menus_item .menus_item_child.second-level li {
+  list-style: none;
+}
+#nav .menus_items .menus_item .menus_item_child.second-level li:hover {
+  background: var(--text-bg-hover);
+}
+#nav .menus_items .menus_item .menus_item_child.second-level li:first-child {
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+#nav .menus_items .menus_item .menus_item_child.second-level li:last-child {
+  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+#nav .menus_items .menus_item .menus_item_child.second-level li a {
+  display: inline-block;
+  padding: 8px 16px;
+  width: 100%;
+  color: var(--font-color) !important;
+  text-shadow: none !important;
+}
 #nav.hide-menu #toggle-menu {
   display: inline-block !important;
 }

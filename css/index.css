@@ -4080,6 +4080,13 @@ mobile()
   -ms-transition: -ms-transform 0.3s;
   transition: transform 0.3s;
 }
+#nav .menus_item_second a {
+  display: inline-block;
+  padding: 8px 16px;
+  width: 100%;
+  color: var(--font-color) !important;
+  text-shadow: none !important;
+}
 #nav .menus_item_child_second {
   position: absolute;
   top: 0;

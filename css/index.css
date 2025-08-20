@@ -2402,19 +2402,6 @@ figure.highlight pre .javascript .function {
   position: relative;
   overflow: hidden;
   margin-bottom: 20px;
-  display: inline-block;
-  width: calc(100% / 2 - 8px);
-  vertical-align: top;
-}
-@media screen and (max-width: 768px) {
-  #recent-posts .recent-post-item {
-    width: 100%;
-  }
-}
-@media screen and (min-width: 2000px) {
-  #recent-posts .recent-post-item {
-    width: calc(100% / 3 - 8px);
-  }
 }
 #recent-posts .recent-post-item:hover .post-bg {
   -webkit-transform: scale(1.1);
@@ -4036,14 +4023,6 @@ mobile()
   position: relative;
   padding: 0 10px;
 }
-#nav .menus_item_second span.site-page.group.second {
-  display: inline-block;
-  padding: 8px 16px;
-  width: 100%;
-  color: var(--font-color) !important;
-  text-shadow: none !important;
-  cursor: pointer;
-}
 #nav .menus_item_second:hover .menus_item_child_second {
   display: block;
 }
@@ -4061,6 +4040,14 @@ mobile()
   -o-transition: -o-transform 0.3s;
   -ms-transition: -ms-transform 0.3s;
   transition: transform 0.3s;
+}
+#nav span.site-page.group.second {
+  display: inline-block;
+  padding: 8px 16px;
+  width: 100%;
+  color: var(--font-color) !important;
+  text-shadow: none !important;
+  cursor: pointer;
 }
 #nav .menus_item_child_second {
   position: absolute;

@@ -1373,13 +1373,7 @@ canvas:not(#ribbon-canvas),
   --default-bg-color: #49b1f5;
   --zoom-bg: #fff;
   --mark-bg: rgba(0,0,0,0.3);
-  --monkey-mask-color: rgba(0,0,0,0.3);
-  --monkey-card-bg: rgba(18,18,18,0.6);
 }
-作者: Chen Zheng,
-链接: https:,
-来源: 繁体猴の客栈,
-著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。,
 body {
   position: relative;
   overflow-y: scroll;
@@ -3430,7 +3424,7 @@ figure.highlight pre .javascript .function {
 }
 #footer {
   position: relative;
-  background-color: var(--monkey-mask-color);
+  background-color: transparent;
   background-attachment: scroll;
   background-position: bottom;
   background-size: cover;
@@ -3881,12 +3875,6 @@ mobile()
   display: -ms-flexbox;
   display: box;
   display: flex;
-  -webkit-box-pack: center;
-  -moz-box-pack: center;
-  -o-box-pack: center;
-  -ms-flex-pack: center;
-  -webkit-justify-content: center;
-  justify-content: center;
   -webkit-box-align: center;
   -moz-box-align: center;
   -o-box-align: center;
@@ -4907,9 +4895,6 @@ mobile()
 }
 .container.post-content ul > li {
   list-style-type: circle;
-}
-#post {
-  background: var(--monkey-card-bg);
 }
 #post .tag_share:after {
   display: block;
@@ -6775,7 +6760,6 @@ blockquote.pullquote.right {
   margin-top: -20px;
 }
 [data-theme='dark'] {
-  --monkey-mask-color: none;
   --global-bg: #0d0d0d;
   --font-color: rgba(255,255,255,0.7);
   --hr-border: rgba(255,255,255,0.4);
@@ -6809,7 +6793,6 @@ blockquote.pullquote.right {
   --timeline-bg: #1f1f1f;
   --zoom-bg: #121212;
   --mark-bg: rgba(0,0,0,0.6);
-  --monkey-card-bg: $monkey-dark-card-bg;
 }
 [data-theme='dark'] #web_bg:before {
   position: absolute;

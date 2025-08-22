@@ -3888,9 +3888,6 @@ mobile()
   -ms-flex-align: center;
   -webkit-align-items: center;
   align-items: center;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding: 0 10px;
 }
 #nav.show {
   opacity: 1;

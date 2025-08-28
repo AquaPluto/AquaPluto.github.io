@@ -1,0 +1,615 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>应用层 | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="一、DNS域名解析1.1 DNS介绍当前TCP&#x2F;IP网络中的设备之间进行通信，是利用和依赖于IP地址实现的。但数字形式的IP地址是很难记忆的。当网络设备众多，想要记住每个设备的IP地址，可以说是”不可能完成的任务”。那么如何解决这一难题呢？我们可以给每个网络设备起一个友好的名称，如： www.baidu.com，这种由文字组成的名称，显而易见要更容易记忆。但是计算机不会理解这种名称的，我">
+<meta property="og:type" content="article">
+<meta property="og:title" content="应用层">
+<meta property="og:url" content="https://aquapluto.github.io/computer-basics/network/application-layer/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="一、DNS域名解析1.1 DNS介绍当前TCP&#x2F;IP网络中的设备之间进行通信，是利用和依赖于IP地址实现的。但数字形式的IP地址是很难记忆的。当网络设备众多，想要记住每个设备的IP地址，可以说是”不可能完成的任务”。那么如何解决这一难题呢？我们可以给每个网络设备起一个友好的名称，如： www.baidu.com，这种由文字组成的名称，显而易见要更容易记忆。但是计算机不会理解这种名称的，我">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper3.png">
+<meta property="article:published_time" content="2025-08-21T02:43:32.000Z">
+<meta property="article:modified_time" content="2025-08-28T12:33:05.381Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="计算机网络">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper3.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "应用层",
+  "url": "https://aquapluto.github.io/computer-basics/network/application-layer/",
+  "image": "https://aquapluto.github.io/img/paper3.png",
+  "datePublished": "2025-08-21T02:43:32.000Z",
+  "dateModified": "2025-08-28T12:33:05.381Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/computer-basics/network/application-layer/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '应用层',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper3.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">应用层</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">应用层</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-21T02:43:32.000Z" title="发表于 2025-08-21 10:43">2025-08-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-08-28T12:33:05.381Z" title="更新于 2025-08-28 20:33">2025-08-28</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E5%9F%BA%E7%A1%80/">计算机基础</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">5.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>18分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="一、DNS域名解析"><a href="#一、DNS域名解析" class="headerlink" title="一、DNS域名解析"></a>一、DNS域名解析</h1><h2 id="1-1-DNS介绍"><a href="#1-1-DNS介绍" class="headerlink" title="1.1 DNS介绍"></a>1.1 DNS介绍</h2><p>当前TCP&#x2F;IP网络中的设备之间进行通信，是利用和依赖于IP地址实现的。但数字形式的IP地址是很难记忆的。当网络设备众多，想要记住每个设备的IP地址，可以说是”不可能完成的任务”。那么如何解决这一难题呢？我们可以给每个网络设备起一个友好的名称，如： <a target="_blank" rel="noopener" href="http://www.baidu.com/">www.baidu.com</a>，这种由文字组成的名称，显而易见要更容易记忆。但是计算机不会理解这种名称的，我们可以利用一种名字解析服务将名称转化成（解析）成IP地址。从而我们就可以利用名称来直接访问网络中设备了。除此之外还有一个重要功能，利用名称解析服务可以实现主机和IP的解耦，即：业务不需要固定依赖具体的IP，当主机IP变化时，只需要修改名称服务即可，用户仍可以通过原有的名称进行访问而不受影响。</p>
+<p>DNS：应用层协议， 是互联网的一项服务。它作为将域名和IP地址相互映射的一个分布式数据库，能够使人更方便地访问互联网，基于C&#x2F;S架构，服务器端：53&#x2F;udp, 53&#x2F;tcp，TCP 的53端口主要用于主从DNS之间的数据同步</p>
+<p>域名的组成：</p>
+<p><img src="/computer-basics/network/application-layer/1753757612402-7be0227a-0cab-422d-bb6c-6ce92f3f6424-175568124462318.png" alt="null"></p>
+<ul>
+<li><p>根域: 全球根服务器节点只有13个,10个在美国，1个荷兰，1个瑞典，1个日本，“.” 表示</p>
+</li>
+<li><p>一级域名：Top Level Domain: tld三类：组织域、国家域(.cn, .ca, .hk, .tw)、反向域com, edu, mil, gov, net, org, int,arpa</p>
+</li>
+<li><p>二级域名：baidu.com</p>
+</li>
+<li><p>三级域名：study.baidu.com</p>
+</li>
+<li><p>最多可达到127级域名</p>
+</li>
+</ul>
+<p>域名，又称网域，顾名思义，是一个域的名称。 是一串用点号分隔的字符，可以用来标识网络中某台主机或某个节点，由DNS服务维护域名和主机IP地址之间的映射关系，当我们在网络中访问某个域名时，实际上访问的是该域名对应的IP地址所标识的主机。</p>
+<p>FQDN：全称域名</p>
+<p>域名是一个域的名称，一个网域或一个节点，可以有多台主机，所以为了精确表示域里面的某台主机，我们在使用域名时，还需要加上主机名，FQDN指的就是同时带有主机名和域名的名称。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">全称域名=域名</span><br><span class="line">www.baidu.org.</span><br><span class="line">blog.baidu.org.</span><br><span class="line">study.baidu.org.</span><br><span class="line">www.sina.com.cn.</span><br><span class="line"></span><br><span class="line">主机名（www）+域名（baidu.org.） </span><br><span class="line">实际上有三种域名</span><br><span class="line">baidu	<span class="comment">#二级域名</span></span><br><span class="line">org		<span class="comment">#一级域名</span></span><br><span class="line">，	   <span class="comment">#根域</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="1-2-DNS服务工作原理"><a href="#1-2-DNS服务工作原理" class="headerlink" title="1.2 DNS服务工作原理"></a>1.2 DNS服务工作原理</h2><p><img src="/computer-basics/network/application-layer/1753757612495-33c116ea-a7da-42a8-9b40-6146e23fcfbd-175568124462319.png" alt="null"></p>
+<ol>
+<li>当客户端主机决定访问 <a target="_blank" rel="noopener" href="https://www.baidu.com/">https://www.baidu.com</a> 这个域名时，首先会查询本机缓存；</li>
+<li>如果本机缓存没有解析记录，则会向其配置的DNS服务器发起解析请求；</li>
+<li>DNS代理解析服务器会先查询其缓存是否有这条解析记录，如果有，则直接返回，如果没有，则继续向上解析；</li>
+<li>DNS代理解析服务器会向根域名服务器发起解析请求，根域名服务器返回 com 域名的DNS地址；</li>
+<li>DNS代理解析服务器继续向 com 域名服务器发起解析请求，com 域名服务器返回 baidu.com域名服务器DNS地址；</li>
+<li>DNS代理解析服务器继续向 baidu.com 域名服务器发起解析请求，baidu.com 域名服务器返回 <a target="_blank" rel="noopener" href="http://www.baidu.com/">www.baidu.com</a> 主机的IP；</li>
+<li>DNS代理解析服务器将 <a target="_blank" rel="noopener" href="http://www.baidu.com/">www.baidu.com</a> 的IP地址存入本机缓存，再读取缓存，将 IP地址发送给客户端主机；</li>
+<li>客户端主机通过IP地址顺利访问 <a target="_blank" rel="noopener" href="https://www.baidu.com;/">https://www.baidu.com；</a></li>
+</ol>
+<p>DNS服务只负责域名解析，也就是说DNS服务只负责返回与域名对应的IP地址，但该IP地址在网络上是否是可达的，并不由DNS决定。每个域名都有专门的服务器负责</p>
+<h2 id="1-3-DNS查询类型"><a href="#1-3-DNS查询类型" class="headerlink" title="1.3 DNS查询类型"></a>1.3 DNS查询类型</h2><p>递归查询</p>
+<blockquote>
+<p>是指DNS服务器在收到用户发起的请求时，必须向用户返回一个准确的查询结果。如果DNS服务器本地没有存储与之对应的信息，则该服务器需要询问其他服务器，并将返回的查询结构提交给用户。形象来讲你向一个人借钱，那个人即使没钱，都直接答应你了，自己去借高利贷等途径给你钱。</p>
+<p>一般客户机和本地DNS服务器之间属于递归查询，即当客户机向DNS服务器发出请求后,若DNS服务器本身不能解析，则会向另外的DNS服务器发出查询请求，得到最终的肯定或否定的结果后转交给客户机。此查询的源和目标保持不变,为了查询结果只需要发起一次查询</p>
+<p>递归算法：客户端向LocalDNS发起域名查询 –&gt; localDNS不知道域名对应的IP –&gt; 但它知道谁知道 –&gt; 他代为帮客户端去查找 –&gt; 最后再返回最终结果</p>
+</blockquote>
+<p>迭代查询</p>
+<blockquote>
+<p>是指DNS服务器在收到用户发起的请求时，并不直接回复查询结果，而是告诉另一台DNS服务器的地址，用户再向这台DNS服务器提交请求，这样依次反复，直到返回查询结果。形象来讲你向一个人借钱，那个人没钱，但是他认识有钱人，让你去找那个有钱人借钱。</p>
+<p>一般情况下(有例外)本地的DNS服务器向其它DNS服务器的查询属于迭代查询,如：若对方不能返回权威的结果，则它会向下一个DNS服务器(参考前一个DNS服务器返回的结果)再次发起进行查询，直到返回查询的结果为止。此查询的源不变,但查询的目标不断变化,为查询结果一般需要发起多次查询。</p>
+<p>迭代算法：客户端向LocalDNS发起域名查询 –&gt; localDNS不知道域名对应的IP –&gt; 但它知道谁知道并推荐客户端应该找谁 –&gt; 客户端自己去找它。</p>
+</blockquote>
+<p>DNS缓存</p>
+<blockquote>
+<p>DNS缓存是将解析数据存储在靠近发起请求的客户端的位置，也可以说DNS数据是可以缓存在任意位置，最终目的是以此减少递归查询过程，可以更快的让用户获得请求结果。</p>
+</blockquote>
+<p>Windows系统</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#显示DNS缓存</span></span><br><span class="line">C:\Users\44301&gt;ipconfig/displaydns</span><br><span class="line"></span><br><span class="line"><span class="comment">#清除DNS缓存</span></span><br><span class="line">C:\Users\44301&gt;ipconfig/flushdns</span><br></pre></td></tr></table></figure>
+
+<p>CentOS系统</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#查看DNS缓存</span></span><br><span class="line">[root@rocky86 ~]# nscd -g</span><br><span class="line"></span><br><span class="line"><span class="comment">#清除DNS缓存</span></span><br><span class="line">[root@rocky86 ~]# nscd -i hosts</span><br></pre></td></tr></table></figure>
+
+<p>Ubuntu系统</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#查看DNS缓存</span></span><br><span class="line">[root@ubuntu ~]# resolvectl statistics</span><br><span class="line"></span><br><span class="line"><span class="comment">#清除DNS缓存</span></span><br><span class="line">[root@ubuntu ~]# resolvectl reset-statistics</span><br></pre></td></tr></table></figure>
+
+<h1 id="二、HTTP详解"><a href="#二、HTTP详解" class="headerlink" title="二、HTTP详解"></a>二、HTTP详解</h1><h2 id="2-1-什么是http协议"><a href="#2-1-什么是http协议" class="headerlink" title="2.1 什么是http协议"></a>2.1 什么是http协议</h2><p>1、全称Hyper Text Transfer Protocol（超文本传输协议）</p>
+<ul>
+<li>普通文本：文件内存放的是一些人类认识的文字符号(汉字、英语、阿拉伯数字)</li>
+<li>超级文本：除了普通文本内容之外，还有视频、图片、语音、超链接</li>
+</ul>
+<p>http协议都能传输上述内容，所以说http协议是专用于传输超文本的协议</p>
+<p>2、http主要用于B&#x2F;S架构</p>
+<p>3、http是基于tcp协议的</p>
+<p>强调：基于http协议发包之前，必须先建立tcp协议的双向通路</p>
+<h2 id="2-2-http协议的发展史"><a href="#2-2-http协议的发展史" class="headerlink" title="2.2 http协议的发展史"></a>2.2 http协议的发展史</h2><h3 id="2-2-1-http0-9"><a href="#2-2-1-http0-9" class="headerlink" title="2.2.1 http0.9"></a>2.2.1 http0.9</h3><p>请求方法：只支持GET方法</p>
+<p>请求头：不支持</p>
+<p>响应信息：只支持纯文本，不支持图片</p>
+<p>无连接&#x2F;短连接&#x2F;非持久连接：利用完 tcp 连接之后会立即回收，所以无连接指的不是说没有连接，而是说没有持久连接&#x2F;长连接的http协议通信，先建立tcp连接，然后客户端发请求包，服务端收到后发送响应包，服务端一旦发送完响应包之后，服务端会立即主动断开tcp连接，下次http通信还需要重新建立tcp连接。 同一个用户在短期内访问多次服务端，那大量的时候都会消耗在重复创建tcp连接上，在高并发场景下，对服务端是非常大的消耗，客户端的访问速度也会非常的慢</p>
+<p>无状态（一个http协议的请求无法标识自己的身份）：http无法保存状态，比如登录状态，那意味着每次请求都需要重新输出一次账号密码来认证</p>
+<h3 id="2-2-2-http1-0"><a href="#2-2-2-http1-0" class="headerlink" title="2.2.2 http1.0"></a>2.2.2 http1.0</h3><p>请求方法：支持PUT(增)、DELETE(删)、POST(改)、GET(查)</p>
+<p>请求头：支持</p>
+<p>响应信息：支持超文本</p>
+<p>支持缓存</p>
+<p>同一个用户在短期内访问多次服务端，不要重复建立tcp连接，而是能够共用一个tcp连接解决方案：支持持久连接&#x2F;长连接 keep-alive</p>
+<ul>
+<li>前提：发送完http响应包之后，服务端立即断tcp连接，这是服务端的默认行为，要改变这种默认行为，要客户端通知服务端才行</li>
+<li>实现：<ul>
+<li>客户端在发送http的请求时，需要再请求头里带上connection: keep-alive这个参数</li>
+<li>服务端的keepalive timeout设置要大于0</li>
+<li>服务端收到后读取该参数，服务端会保持与这一个客户端tcp连接一段时间，响应时也会在响应头里放connection:keep-alive这个参数</li>
+<li>该tcp会保持一段时间直到达到服务端设置的keepalive_timeout时间</li>
+</ul>
+</li>
+<li>补充:<ul>
+<li>在http1.0协议还需要你发请求时你自己加上connection: keep-alive这个参数</li>
+<li>在http1.1协议里所有的请求都会自动加上connection: keep-alive，也就是说在htp1.1客户端默认就开启了长连接支持，配套的服务端也要开启(服务端的keepalive_timeout设置要大于0)</li>
+</ul>
+</li>
+</ul>
+<p>服务端要客户端有状态(让客户端每次发请求的时候都能标识自身的唯一性)：解决方案是cookie、session、jwt</p>
+<h3 id="2-2-3-http1-1"><a href="#2-2-3-http1-1" class="headerlink" title="2.2.3 http1.1"></a>2.2.3 http1.1</h3><p>默认所有请求都启用长连接，请求与响应头里都带着connection:keep-alive，对应服务端需要设置keepalive timeout大于0</p>
+<p>Pipelining(请求流水线化&#x2F;管道化)</p>
+<p>分块传输编码chunked</p>
+<h3 id="2-2-4-http2-0"><a href="#2-2-4-http2-0" class="headerlink" title="2.2.4 http2.0"></a>2.2.4 http2.0</h3><p>引入头信息压缩机制：头信息使用gzip或compress压缩后再发送</p>
+<p>允许服务器有新数据时未经请求，主动向客户端发送资源，而无需客户端拉取，即服务器推送（server push）</p>
+<h2 id="2-3-http协议的格式"><a href="#2-3-http协议的格式" class="headerlink" title="2.3 http协议的格式"></a>2.3 http协议的格式</h2><h3 id="2-3-1-URI和URL"><a href="#2-3-1-URI和URL" class="headerlink" title="2.3.1 URI和URL"></a>2.3.1 URI和URL</h3><p>URI：统一资源标识符</p>
+<p>URL：统一资源定位服务，是URI的一种具体实现<br><code>http://192.168.71.10:8080/a/b/1.txt?x=1&amp;y=2&amp;page=10#_label5</code></p>
+<ul>
+<li>http:&#x2F;&#x2F; —&gt; 协议部分。不写协议，默认http协议</li>
+<li>192.168.71.10:8080 —&gt; ip+port部分，不写端口默认服务端的端口是80</li>
+<li>&#x2F;a&#x2F;b&#x2F;1.txt —&gt; 路径部分，不写路径，默认加一个&#x2F;结尾</li>
+<li>?x&#x3D;1&amp;y&#x3D;2&amp;page&#x3D;10 —&gt; 请求参数部分</li>
+<li>#_label5 —&gt; 锚</li>
+</ul>
+<p>URN：也是URI的一种具体实现，例如：<code>mailto:java-net@java.sun.com.</code></p>
+<h3 id="2-3-2-请求request"><a href="#2-3-2-请求request" class="headerlink" title="2.3.2 请求request"></a>2.3.2 请求request</h3><p>包含四部分：</p>
+<ul>
+<li>请求首行：请求方法 请求的路径部分及后续部分 http协议版本<ul>
+<li>GET &#x2F;a.txt HTTP&#x2F;1.1</li>
+</ul>
+</li>
+<li>请求头：都是 key:value 格式，用来定制一些参数</li>
+<li>空行</li>
+<li>请求体数据</li>
+</ul>
+<p>请求方法:</p>
+<ul>
+<li>GET(查) —-&gt; 请求的数据可以放在URL地址的?号后</li>
+<li>POST(改) —-&gt; 携带请求体数据</li>
+<li>DELETE(删)</li>
+<li>PUT(增)</li>
+<li>HEAD：类似GET请求，不一样的是不会获取响应的数据，但是会获取响应头，而响应头包含着状态码，状态码代表着本次访问是否成功，所以HEAD主要用来检测某个资源是否可以正常访问</li>
+<li>OPTIONS：一般用作预检请求，在发真正请求之前先发个options请求预检一下服务端支持哪些http方法、跨域检测等</li>
+</ul>
+<p>GET和POST的区别:</p>
+<ul>
+<li>携带数据的方式不同</li>
+<li>携带数据的话post更安全</li>
+<li>传输数据大小<ul>
+<li>GET与POST这两个方法本身没有限制</li>
+<li>但因为GET方法的数据都放在URL地址中，而URL地址的长度在一些浏览器中是有限制</li>
+<li>所以如果要传一些比较大的数据，不能用GET方法，应该使用POST方法把数据放入请求里传输</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-3-3-响应response"><a href="#2-3-3-响应response" class="headerlink" title="2.3.3 响应response"></a>2.3.3 响应response</h3><p>也是包含四部分：</p>
+<ul>
+<li>响应首行：协议 状态码<ul>
+<li>HTTP&#x2F;1.1 200 OK</li>
+</ul>
+</li>
+<li>响应头<ul>
+<li>set-cookie：要求浏览器把cookie信息存入本地</li>
+<li>cache-control：要求浏览器把一些文件缓存到本地</li>
+<li>connection:keep-alive：要求浏览器保持长连接</li>
+<li>Content-Type:text&#x2F;html：告诉浏览器本次返回内容的格式<ul>
+<li>text&#x2F;plain 告诉浏览器本次返回的内容格式是普通文本</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>空行</li>
+<li>响应体</li>
+</ul>
+<p>状态码</p>
+<ul>
+<li>2xx：代表访问成功</li>
+<li>3xx：本次请求被重定向</li>
+<li>4xx：客户端错误<ul>
+<li>404：客户端访问的资源不存在</li>
+<li>403：客户端没有对目标资源的访问权限</li>
+</ul>
+</li>
+<li>5xx：服务端错误<ul>
+<li>503：服务端故障</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-4-http协议完整的请求与响应流程"><a href="#2-4-http协议完整的请求与响应流程" class="headerlink" title="2.4 http协议完整的请求与响应流程"></a>2.4 http协议完整的请求与响应流程</h2><p>浏览器访问一个URL地址：<a target="_blank" rel="noopener" href="http://baidu.com/a/b/1.html">http://baidu.com:80/a/b/1.html</a></p>
+<ol>
+<li>浏览器会先问本地DNS把域名baidu.com解析为ip地址</li>
+<li>浏览器作为客户端会与目 ip:port 建立TCP三次握手</li>
+<li>浏览器会基于HTTP协议封装请求包(OSI七层的封包流程)</li>
+<li>服务端收到包(OSI七层的解包流程)，拿到一个HTTP协议的请求包，按照HTTP协议来解析请求会拿到请求路径部分 &#x2F;a&#x2F;b&#x2F;1.html，服务端会打开该文件(对一个文件描述符)把文件内容从硬盘读入内存，然后服务端程序会基于HTTP协议封装读入内存的数据，形成一个响应包，发给客户端浏览器</li>
+<li>浏览器收到HTTP协议的响应包之后，先解析响应头，看到响应的状态码，知道本次是否成功，在解析响应头时，可以拿到Content-Type就知道该用什么数据格式来解析内容，如果值为 text&#x2F;html 就会按照html代码的方式来解析返回的内容，再读取内容部分，当成html代码来解析</li>
+<li>在解析html代码的过程中，有可能遇到css、jss、图片、视频等资源，会发起二次、三次….请求，直到把整个页面都渲染完毕</li>
+</ol>
+<h1 id="三、HTTPS详解"><a href="#三、HTTPS详解" class="headerlink" title="三、HTTPS详解"></a>三、HTTPS详解</h1><h2 id="3-1-为什么使用HTTPS"><a href="#3-1-为什么使用HTTPS" class="headerlink" title="3.1 为什么使用HTTPS"></a>3.1 为什么使用HTTPS</h2><p>http协议：明文传输，可能会遭到窃听、改、冒充&#x2F;挟持，因此使用HTTP协议传输隐私信息非常不安全。<br><img src="/computer-basics/network/application-layer/4698176a285f4557b395d76ac7e09343.png" alt="在这里插入图片描述"><br>https：http协议 + ssl协议，密文传输，可以防止窃听、算改，并且有ca权威机构认证服务端身份，可以防冒充&#x2F;劫持</p>
+<h2 id="3-2-SSL协议"><a href="#3-2-SSL协议" class="headerlink" title="3.2 SSL协议"></a>3.2 SSL协议</h2><p>SSL是一种加密协议，对http协议通信的加强，可以防窃听、改、伪装&#x2F;冒充</p>
+<p><img src="/computer-basics/network/application-layer/image-20250821112554619.png" alt="image-20250821112554619"></p>
+<p>数字签名：防止篡改&#x2F;丢失</p>
+<ul>
+<li>把包的内容做hash校验得到的hash值称之为摘要 —&gt; digest</li>
+<li>服务端用自己的私钥对digest进行加密 —&gt; 得到东西叫数字签名signature</li>
+<li>客户端收到包之后先用公钥解开得到digest —&gt; 重新hash，验证是否被篡改</li>
+</ul>
+<p>数字证书：防止伪装&#x2F;冒充</p>
+<ul>
+<li>CA中心：公认的权威认证中心，找一个证书中心为自己的公钥做认证。</li>
+<li>CA中心用自己的私钥，对服务端的公钥和其他相关信息一起加密，生成“数字证书”。</li>
+<li>数字证书就是加了密的服务端公钥。</li>
+</ul>
+<p><img src="/computer-basics/network/application-layer/ec3f7b977a81445a8303abaa66d55dd6.png" alt="在这里插入图片描述"><br>非对称加密</p>
+<ul>
+<li>两个密码(公钥、私钥)：公钥加密用私钥解密，私钥加密用公钥解密</li>
+<li>优点：<ul>
+<li>公私分明，公钥任何人都可以获取，而私钥只有服务端自己手里有</li>
+<li>安全性更高一些，只要私钥不泄露，就没法解开包</li>
+</ul>
+</li>
+<li>缺点：非对称加密的速度慢，不适合大规模数据加解密</li>
+</ul>
+<p>对称加密</p>
+<ul>
+<li>只有一个私钥，加解密用的都是同一套私钥</li>
+<li>优点：加解密效率高</li>
+<li>缺点：私钥的泄露几率高，一旦某一方泄露私钥，则加密信息就无法得到安全保障问题</li>
+</ul>
+<p>SSL协议通信过程中即用了非对称加密，又用了对称加密</p>
+<ul>
+<li>客户端先通过ssl通信的第二次握手获得服务端数字证书（内含公钥）</li>
+<li>然后使用非对称加密传输对称加密的密钥（更安全），后面的数据传输就使用对称性加密（更高效）。</li>
+</ul>
+<h2 id="3-3-TLS协议"><a href="#3-3-TLS协议" class="headerlink" title="3.3 TLS协议"></a>3.3 TLS协议</h2><p>SSL是一种技术，您的应用程序或浏览器可能使用该技术在任何网络上创建安全的加密通信通道。但是SSL是一种较老的技术，包含一些安全漏洞。传输层安全性协议(TLS)是SSL 的升级版本，用于修复现有 SSL 漏洞。TLS 可以更高效地进行身份验证，并继续支持加密的通信通道。</p>
+<p>TLS协议就是一个升级版的SSL，由于SSL这一术语更为常用，所以我们通常仍将我们的安全证书称作SSL</p>
+<h2 id="3-4-HTTPS通信过程"><a href="#3-4-HTTPS通信过程" class="headerlink" title="3.4 HTTPS通信过程"></a>3.4 HTTPS通信过程</h2><ol>
+<li><p>客户端发起HTTPS请求</p>
+<p>用户在浏览器里输入一个https网址，然后连接到服务器的443端口</p>
+</li>
+<li><p>服务端的配置</p>
+<p>采用HTTPS协议的服务器必须要有一套数字证书，可以自己制作，也可以向组织申请。区别就是自己颁发的证书需要客户端验证通过，才可以继续访问，而使用受信任的公司申请的证书则不会弹出提示页面。这套证书其实就是一对公钥和私钥</p>
+</li>
+<li><p>传送服务器的证书给客户端</p>
+<p>证书里其实就是公钥，并且还包含了很多信息，如证书的颁发机构，过期时间等等</p>
+</li>
+<li><p>客户端解析验证服务器证书</p>
+<p>这部分工作是由客户端的TLS来完成的，首先会验证公钥是否有效，比如：颁发机构，过期时间等等，如果发现异常，则会弹出一个警告框，提示证书存在问题。如果证书没有问题，那么就生成一个随机值。然后用证书中的公钥对该随机值进行非对称加密</p>
+</li>
+<li><p>客户端将加密信息传送服务器</p>
+<p>这部分传送的是用证书加密后的随机值，目的就是让服务端得到这个随机值，以后客户端和服务端的通信就可以通过这个随机值来进行加密解密了</p>
+</li>
+<li><p>服务端解密信息</p>
+<p>服务端将客户端发送过来的加密后的随机值用服务器私钥解密后，得到了客户端传过来的随机值</p>
+</li>
+<li><p>服务器加密信息并发送信息</p>
+<p>服务器将数据利用随机值进行对称加密,再发送给客户端</p>
+</li>
+<li><p>客户端接收并解密信息</p>
+<p>客户端用之前生成的随机值解密服务段传过来的数据，于是获取了解密后的内容</p>
+</li>
+</ol>
+<h1 id="四、跨域和Cookie"><a href="#四、跨域和Cookie" class="headerlink" title="四、跨域和Cookie"></a>四、跨域和Cookie</h1><p>cookie机制：</p>
+<ol>
+<li>访问一个站点，服务端返回的响应头会设置set-cookie: k1&#x3D;v1;k2&#x3D;v2</li>
+<li>浏览器收到后，会根据set-cookie来设置存入本地的cookie值</li>
+<li>下次请求该网站，浏览器会从本地cookie里取出cookie值，放到http请求的cookie字段里，发往服务端</li>
+<li>特点:<ul>
+<li>cookie是浏览器的功能，是放在客户端的</li>
+<li>cookie内存放的内容是可以被客户端篡改的</li>
+</ul>
+</li>
+</ol>
+<p>cookie机制+session机制：</p>
+<ol>
+<li>访问一个站点，输入自己的账号密码进程认证，服务端收到请求之后认证通过，会产生一些标识用身份的数据<ul>
+<li>这些数据 —&gt; value</li>
+<li>把这些数据关联一个 —&gt; key</li>
+<li>key:value</li>
+<li>key给客户端，存入cookie</li>
+<li>value放在服务端，称之为session</li>
+</ul>
+</li>
+<li>服务端会把key放入cookie放入set-cookie里，返回给客户端</li>
+<li>客户端收到响应后，会把key存入本地的cookie</li>
+<li>下次请求该网站，会带着该key去到目标站点，目标站点收到后，会根据key取出value，value里放着本次请求的身份</li>
+<li>特点：把保密数据放在服务端，称之为session数据，然后针对session数据生成一个key值存入客户端的cookie中<ul>
+<li>可以防止篡改</li>
+<li>在集群的场景下，需要做会话共享(session存入共享的地方)<ul>
+<li>通过会将session数据存入redis</li>
+<li>redis作为一个大家依赖的共享点，会影响集群的扩展性</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>总结cookie和session：</p>
+<ul>
+<li>单用cookie来存放状态信息<ul>
+<li>优点:服务端不需要做会话共享</li>
+<li>缺点:客户端可以算改状态信息，不安全</li>
+</ul>
+</li>
+<li>cookie+session<ul>
+<li>优点:状态信息即session数据是存放在服务端的，状态不会被改</li>
+<li>缺点:服务端需要做会话共享，增加了集群的耦合性</li>
+</ul>
+</li>
+</ul>
+<p>JWT(json web token)：</p>
+<ol>
+<li>服务端会将状态信息进行加密，然后把加密数据放入客户的cookie中，这个加密的数据称之为token —&gt; 篡改的问题解决了</li>
+<li>下次请求会从cookie中取出token带上一起发送给服务端，服务端收到后用加密算法解密 —&gt; 不需要再做会话共享&#x2F;保持</li>
+<li>追求：服务端不保存状态</li>
+<li>优点：不需要做会话共享、又能很安全</li>
+<li>缺点：最大的缺点就是无法做到主动废弃掉某个token，一个token一旦下发之后，就只能等着该token，服务端无法做到主动废弃该token —&gt; 想要做到随时都能主动废弃掉某个token，就需要开发额外的代码来支持</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/computer-basics/network/application-layer/">https://aquapluto.github.io/computer-basics/network/application-layer/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/">计算机网络</a></div><div class="post-share"><div class="social-share" data-image="/img/paper3.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/computer-basics/network/network-architecture/" title="物理网络架构全链路"><img class="cover" src="/img/paper5.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">物理网络架构全链路</div></div><div class="info-2"><div class="info-item-1">流量类型  南北流量：内网机器与外...</div></div></div></a><a class="pagination-related" href="/computer-basics/network/transport-layer/" title="传输层"><img class="cover" src="/img/paper1.jpg" onerror="onerror=null;src='/img/error-page.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">传输层</div></div><div class="info-2"><div class="info-item-1">一、TCP和UDP协议tcp协议：...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/computer-basics/network/network-architecture/" title="物理网络架构全链路"><img class="cover" src="/img/paper5.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">物理网络架构全链路</div></div><div class="info-2"><div class="info-item-1">流量类型  南北流量：内网机器与外...</div></div></div></a><a class="pagination-related" href="/computer-basics/network/network-layer/" title="网络层"><img class="cover" src="/img/paper2.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">网络层</div></div><div class="info-2"><div class="info-item-1">一、网络基础OSI 七层&#x3D...</div></div></div></a><a class="pagination-related" href="/computer-basics/network/transport-layer/" title="传输层"><img class="cover" src="/img/paper1.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">传输层</div></div><div class="info-2"><div class="info-item-1">一、TCP和UDP协议tcp协议：...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E3%80%81DNS%E5%9F%9F%E5%90%8D%E8%A7%A3%E6%9E%90"><span class="toc-text">一、DNS域名解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-DNS%E4%BB%8B%E7%BB%8D"><span class="toc-text">1.1 DNS介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-DNS%E6%9C%8D%E5%8A%A1%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="toc-text">1.2 DNS服务工作原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-3-DNS%E6%9F%A5%E8%AF%A2%E7%B1%BB%E5%9E%8B"><span class="toc-text">1.3 DNS查询类型</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8C%E3%80%81HTTP%E8%AF%A6%E8%A7%A3"><span class="toc-text">二、HTTP详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E4%BB%80%E4%B9%88%E6%98%AFhttp%E5%8D%8F%E8%AE%AE"><span class="toc-text">2.1 什么是http协议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-http%E5%8D%8F%E8%AE%AE%E7%9A%84%E5%8F%91%E5%B1%95%E5%8F%B2"><span class="toc-text">2.2 http协议的发展史</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-1-http0-9"><span class="toc-text">2.2.1 http0.9</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-2-http1-0"><span class="toc-text">2.2.2 http1.0</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-3-http1-1"><span class="toc-text">2.2.3 http1.1</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-4-http2-0"><span class="toc-text">2.2.4 http2.0</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-http%E5%8D%8F%E8%AE%AE%E7%9A%84%E6%A0%BC%E5%BC%8F"><span class="toc-text">2.3 http协议的格式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-1-URI%E5%92%8CURL"><span class="toc-text">2.3.1 URI和URL</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-2-%E8%AF%B7%E6%B1%82request"><span class="toc-text">2.3.2 请求request</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-3-%E5%93%8D%E5%BA%94response"><span class="toc-text">2.3.3 响应response</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-http%E5%8D%8F%E8%AE%AE%E5%AE%8C%E6%95%B4%E7%9A%84%E8%AF%B7%E6%B1%82%E4%B8%8E%E5%93%8D%E5%BA%94%E6%B5%81%E7%A8%8B"><span class="toc-text">2.4 http协议完整的请求与响应流程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%89%E3%80%81HTTPS%E8%AF%A6%E8%A7%A3"><span class="toc-text">三、HTTPS详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8HTTPS"><span class="toc-text">3.1 为什么使用HTTPS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-SSL%E5%8D%8F%E8%AE%AE"><span class="toc-text">3.2 SSL协议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-TLS%E5%8D%8F%E8%AE%AE"><span class="toc-text">3.3 TLS协议</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-4-HTTPS%E9%80%9A%E4%BF%A1%E8%BF%87%E7%A8%8B"><span class="toc-text">3.4 HTTPS通信过程</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E8%B7%A8%E5%9F%9F%E5%92%8CCookie"><span class="toc-text">四、跨域和Cookie</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/role/" title="role"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="role"/></a><div class="content"><a class="title" href="/CICD/ansible/role/" title="role">role</a><time datetime="2025-08-27T10:49:36.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/playbook/" title="playbook"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="playbook"/></a><div class="content"><a class="title" href="/CICD/ansible/playbook/" title="playbook">playbook</a><time datetime="2025-08-27T10:49:30.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/module/" title="module"><img src="/img/paper4.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="module"/></a><div class="content"><a class="title" href="/CICD/ansible/module/" title="module">module</a><time datetime="2025-08-27T10:49:25.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/command/" title="command"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="command"/></a><div class="content"><a class="title" href="/CICD/ansible/command/" title="command">command</a><time datetime="2025-08-27T10:49:19.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/deploy/" title="deploy"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="deploy"/></a><div class="content"><a class="title" href="/CICD/ansible/deploy/" title="deploy">deploy</a><time datetime="2025-08-27T10:49:09.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

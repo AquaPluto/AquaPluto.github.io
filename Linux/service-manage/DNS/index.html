@@ -1,0 +1,833 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>域名DNS解析服务 | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="一、DNS服务相关概念和技术linux上的DNS文件&#x2F;etc&#x2F;hostshosts文件：直接定义域名与IP地址的对应关系，当主机访问某个域名时，会先从hosts文件中寻找与该域名对应的IP地址，如果找到则直接请求该IP地址，如果找不到才会将该域名提交DNS服务请求解析该域名对应的IP地址 远程登录linux主机过慢问题：有时客户端想远程登录一台linux主机，但每次登录输入密码">
+<meta property="og:type" content="article">
+<meta property="og:title" content="域名DNS解析服务">
+<meta property="og:url" content="https://aquapluto.github.io/Linux/service-manage/DNS/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="一、DNS服务相关概念和技术linux上的DNS文件&#x2F;etc&#x2F;hostshosts文件：直接定义域名与IP地址的对应关系，当主机访问某个域名时，会先从hosts文件中寻找与该域名对应的IP地址，如果找到则直接请求该IP地址，如果找不到才会将该域名提交DNS服务请求解析该域名对应的IP地址 远程登录linux主机过慢问题：有时客户端想远程登录一台linux主机，但每次登录输入密码">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper4.png">
+<meta property="article:published_time" content="2025-08-20T08:51:47.000Z">
+<meta property="article:modified_time" content="2025-08-28T12:33:05.299Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="服务管理">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper4.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "域名DNS解析服务",
+  "url": "https://aquapluto.github.io/Linux/service-manage/DNS/",
+  "image": "https://aquapluto.github.io/img/paper4.png",
+  "datePublished": "2025-08-20T08:51:47.000Z",
+  "dateModified": "2025-08-28T12:33:05.299Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/Linux/service-manage/DNS/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '域名DNS解析服务',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper4.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">域名DNS解析服务</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">域名DNS解析服务</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-20T08:51:47.000Z" title="发表于 2025-08-20 16:51">2025-08-20</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-08-28T12:33:05.299Z" title="更新于 2025-08-28 20:33">2025-08-28</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Linux/">Linux</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">9.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>38分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="一、DNS服务相关概念和技术"><a href="#一、DNS服务相关概念和技术" class="headerlink" title="一、DNS服务相关概念和技术"></a>一、DNS服务相关概念和技术</h1><h2 id="linux上的DNS文件"><a href="#linux上的DNS文件" class="headerlink" title="linux上的DNS文件"></a>linux上的DNS文件</h2><h3 id="etc-hosts"><a href="#etc-hosts" class="headerlink" title="&#x2F;etc&#x2F;hosts"></a>&#x2F;etc&#x2F;hosts</h3><p>hosts文件：直接<strong>定义域名与IP地址的对应关系</strong>，当主机访问某个域名时，会先从hosts文件中寻找与该域名对应的IP地址，如果找到则直接请求该IP地址，如果找不到才会将该域名提交DNS服务请求解析该域名对应的IP地址</p>
+<p>远程登录linux主机过慢问题：有时客户端想远程登录一台linux主机，但每次登录输入密码后都会等很长一段时间才会进入，这是因为linux主机在返回信息时需要解析ip，如果在linux主机的hosts文件事先加入客户端的ip地址，这时再从客户端远程登录linux就会变很快。当然！这里所说的远程登录不仅仅是ssh登录，还可以是mysql远程登录，或是文件共享的查询等。</p>
+<p>Windows系统中的hosts文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">%windir%\System32\drivers\etc\hosts</span><br><span class="line"></span><br><span class="line"><span class="comment"># %windir% 是windows 系统中的环境变量写法，表示 Windows 安装目录，上述路径一般是</span></span><br><span class="line">C:\Windows\System32\drivers\etc</span><br></pre></td></tr></table></figure>
+
+<p>Linux系统中的hosts文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">/etc/hosts	<span class="comment">#只适合机器少的场景，机器多就不适合用</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#格式</span></span><br><span class="line">122.10.117.2 www.magedu.org. [www]</span><br><span class="line">93.46.8.89  www.google.com. [google]</span><br></pre></td></tr></table></figure>
+
+<p>范例：实现域名解析</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@Rocky8 ~]#vim /etc/chrony.conf </span><br><span class="line">server ntp.wujl.org iburst</span><br><span class="line"></span><br><span class="line">[root@Rocky8 ~]#vim /etc/hosts</span><br><span class="line">10.0.0.183 ntp.wujl.org</span><br><span class="line"></span><br><span class="line">[root@Rocky8 ~]#ping ntp.wujl.org</span><br><span class="line">PING ntp.wujl.org (10.0.0.183) 56(84) bytes of data.</span><br></pre></td></tr></table></figure>
+
+<h3 id="etc-resolv-conf"><a href="#etc-resolv-conf" class="headerlink" title="&#x2F;etc&#x2F;resolv.conf"></a>&#x2F;etc&#x2F;resolv.conf</h3><p>resolv.conf文件：DNS客户机配置文件，用于设置DNS服务器的IP地址及DNS域名，还包含了主机的域名搜索顺序。该文件是由域名解析器（resolver，一个根据主机名解析IP地址的库）使用的配置文件。</p>
+<p> 作用</p>
+<ul>
+<li><p>可以提供DNS服务器域名和IP地址，帮助解析</p>
+</li>
+<li><p>search选项可以补全短域名</p>
+</li>
+</ul>
+<p>假如resolv.conf没有任何配置并且网络没有配置DNS，你可能是这样的状态：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@nick ~]# ping www.baidu.com</span><br><span class="line">ping: unknown host www.baidu.com</span><br><span class="line"></span><br><span class="line">连不通外网！！！</span><br></pre></td></tr></table></figure>
+
+<p>我们可以往里面加一个域名服务器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nameserver 114.114.114.114</span><br></pre></td></tr></table></figure>
+
+<p>DNS解析的步骤：</p>
+<ol>
+<li>查找&#x2F;etc&#x2F;hosts</li>
+<li>根据nameserver查找域名</li>
+<li>如果在nameserver查找不到域名就进行search补全，重新走1~2步</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Client --&gt;hosts文件 --&gt; Client DNS Service Local Cache（缓存） --&gt; DNS Server (recursion递归) --&gt; DNS Server Cache --&gt; DNS iteration(迭代) --&gt; 根 --&gt; 顶级域名DNS --&gt;二级域名DNS…</span><br></pre></td></tr></table></figure>
+
+<h3 id="etc-nsswitch-conf"><a href="#etc-nsswitch-conf" class="headerlink" title="&#x2F;etc&#x2F;nsswitch.conf"></a>&#x2F;etc&#x2F;nsswitch.conf</h3><p>配置解析顺序，是先解析hosts文件，还是先解析DNS服务器</p>
+<p>nsswitch.conf与系统获取解析的顺序有关。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[root@f5ha.com ~]# vi /etc/nsswitch.conf 	<span class="comment">#找到hosts关键字</span></span><br><span class="line"><span class="comment">#hosts:   db files nisplus nis dns</span></span><br><span class="line">hosts:   files dns          				<span class="comment">#此为默认配置 </span></span><br></pre></td></tr></table></figure>
+
+<p> 从配置文件就可以看出系统是先files（&#x2F;etc&#x2F;hosts）解析，再从dns（&#x2F;etc&#x2F;resolv.conf）解析。</p>
+<p>&#x2F;etc&#x2F;hosts和DNS的优先级</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/hosts</span><br><span class="line">10.0.0.8 www.baidu.com</span><br><span class="line"></span><br><span class="line">vim /etc/sysconfig/nerwork-scripts/ifcfg-eth0</span><br><span class="line">....</span><br><span class="line">DOMAIN=magedu.com</span><br><span class="line">....</span><br><span class="line"></span><br><span class="line">由于hosts比DNS优先级高，所以在/etc/hosts将www.baidu.com指向的IP地址为10.0.0.8后，去ping www.baidu.com得出的IP地址是10.0.0.8，就不是原先百度的地址</span><br></pre></td></tr></table></figure>
+
+<h3 id="Ubuntu中的-systemd-resolved-服务"><a href="#Ubuntu中的-systemd-resolved-服务" class="headerlink" title="Ubuntu中的 systemd-resolved 服务"></a>Ubuntu中的 systemd-resolved 服务</h3><p>在 ubuntu 系统中，虽然在网卡中配置了 DNS 服务器的IP地址，但在使用相关命令进行 DNS 解析时，默认的 DNS 服务器使用的是 127.0.0.53，而并不是我们在网卡上配置的DNS 服务器地址。</p>
+<p>systemd-resolved 服务为本地应用程序提供了网络名字解析服务, 系统通过它对外进行 dns 请求</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> /etc/resolv.conf</span><br><span class="line">......</span><br><span class="line">nameserver 127.0.0.53 	<span class="comment">#默认DNS 配置在此处</span></span><br><span class="line">options edns0 trust-ad</span><br><span class="line">search magedu.com magedu.org</span><br><span class="line"></span><br><span class="line"><span class="comment">#直接修改上述文件</span></span><br><span class="line">[root@ubuntu ~]# vim /etc/resolv.conf</span><br><span class="line">......</span><br><span class="line"><span class="comment">#nameserver 127.0.0.53</span></span><br><span class="line">nameserver 223.6.6.6</span><br><span class="line"></span><br><span class="line"><span class="comment">#测试</span></span><br><span class="line">[root@ubuntu ~]# nslookup www.magedu.com</span><br><span class="line">Server: 223.6.6.6</span><br><span class="line">Address: 223.6.6.6#53</span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name: www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br><span class="line"></span><br><span class="line"><span class="comment">#但是只要再次重启网络相关，该内容会被还原</span></span><br><span class="line">[root@ubuntu ~]# netplan apply</span><br><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> /etc/resolv.conf | grep nameserver</span><br><span class="line">nameserver 127.0.0.53</span><br><span class="line"></span><br><span class="line"><span class="comment">#修改软链接文件指向,保证永久生效</span></span><br><span class="line">[root@ubuntu ~]# ll /etc/resolv.conf</span><br><span class="line">lrwxrwxrwx 1 root root 39 Apr 21  2022 /etc/resolv.conf -&gt;../run/systemd/resolve/stub-resolv.conf</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# <span class="built_in">rm</span> -f /etc/resolv.conf</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# <span class="built_in">ln</span> -sv /run/systemd/resolve/resolv.conf /etc/resolv.conf</span><br><span class="line"><span class="string">&#x27;/etc/resolv.conf&#x27;</span> -&gt; <span class="string">&#x27;/run/systemd/resolve/resolv.conf&#x27;</span></span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# ll /etc/resolv.conf</span><br><span class="line">lrwxrwxrwx 1 root root 32 Jun  1 11:26 /etc/resolv.conf -&gt;/run/systemd/resolve/resolv.conf</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# nslookup www.magedu.com</span><br><span class="line">Server: 223.6.6.6</span><br><span class="line">Address: 223.6.6.6#53</span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name: www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<p>设置全局DNS</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# vim /etc/systemd/resolved.conf</span><br><span class="line">......</span><br><span class="line">DNS=223.5.5.5 223.6.6.6</span><br><span class="line"></span><br><span class="line"><span class="comment">#重启服务</span></span><br><span class="line">[root@ubuntu ~]# systemctl restart systemd-resolved.service</span><br><span class="line"></span><br><span class="line"><span class="comment">#查看</span></span><br><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> /etc/resolv.conf</span><br><span class="line">......</span><br><span class="line">nameserver 223.5.5.5</span><br><span class="line">nameserver 223.6.6.6</span><br><span class="line"></span><br><span class="line"><span class="comment">#测试</span></span><br><span class="line">[root@ubuntu ~]# nslookup www.magedu.com</span><br><span class="line">Server: 223.5.5.5</span><br><span class="line">Address: 223.5.5.5#53</span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name: www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<h2 id="DNS服务器的分类"><a href="#DNS服务器的分类" class="headerlink" title="DNS服务器的分类"></a>DNS服务器的分类</h2><ul>
+<li>根DNS服务器：有13个，根域名服务器并不直接对域名进行解析，而是返回域名所属顶级域名的顶级域名服务器的IP地址</li>
+<li>顶级域名DNS服务器：负责管理二级域名，即知道哪个域名服务器管理着二级域名</li>
+<li>主&#x2F;权限&#x2F;授权DNS服务器：负责管理某个区的域名。他里面存的解析记录并不是从别人那里缓存到本地的，而是实打实配置存到自己机器上的，从这里拿到的记录具有权威性</li>
+<li>从DNS服务器：又称之为辅助dns，这是一个备份服务器，从这里拿到的记录也具有权威性</li>
+<li>缓存DNS服务器：不负责本地解析，采用递归方式转发客户机查询请求，并返回结果给客户机的DNS服务器，同时缓存查询回来的结果</li>
+<li>转发器：这台DNS发现非本机负责的请求后，不再向根发起请求，而是直接转发给指定的一台或多台服务器，自身并不保存查询结果</li>
+</ul>
+<h2 id="DNS解析答案"><a href="#DNS解析答案" class="headerlink" title="DNS解析答案"></a>DNS解析答案</h2><ul>
+<li><p>肯定答案：存在对应的查询结果</p>
+</li>
+<li><p>否定答案：请求的条目不存在等原因导致无法返回结果</p>
+</li>
+<li><p>权威答案：直接由存有此查询结果的DNS服务器（权威服务器）返回的答案</p>
+</li>
+<li><p>非权威答案：由其它非权威服务器返回的查询答案</p>
+</li>
+</ul>
+<h2 id="DNS解析的优先级"><a href="#DNS解析的优先级" class="headerlink" title="DNS解析的优先级"></a>DNS解析的优先级</h2><ul>
+<li>用浏览器访问：Chrome DNS 缓存 &gt; HOSTS文件 &gt; 系统DNS缓存 &gt; DNS服务器</li>
+<li>不用浏览器访问：HOSTS文件 &gt; 系统DNS缓存 &gt; DNS服务器</li>
+</ul>
+<h2 id="DNS资源记录"><a href="#DNS资源记录" class="headerlink" title="DNS资源记录"></a>DNS资源记录</h2><p>具体解析规则 <code>/etc/bind/db.*</code></p>
+<p>该文件定义域名的具体解析规则，该文件有多条资源记录组成，每一行都是一条资源记录，在RFC文档中，DNS解析记录被称为Resource Recode（资源记录），缩写为 RR</p>
+<h3 id="资源记录定义"><a href="#资源记录定义" class="headerlink" title="资源记录定义"></a>资源记录定义</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">NAME  TTL  CLASS  TYPE  VALUE</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>NAME：资源记录名称，根据TYPE不一样，写法会有不同</p>
+</li>
+<li><p>TTL：缓存有效期，默认单位是秒</p>
+<ul>
+<li>其他单位M(分)，H(时)， D(天)，W(周)</li>
+<li>开头写，全局继承：<code>$TTL 1D</code></li>
+</ul>
+</li>
+<li><p>CLASS：资源记录类别，最常用IN（第一条写IN后，后面的可以省略，默认继承上一条）</p>
+</li>
+<li><p>TYPE：解析记录类型</p>
+</li>
+<li><p>VALUE：值是由TYPE（类型）决定的</p>
+</li>
+</ul>
+<p>注意：</p>
+<ul>
+<li><p>TTL可从全局继承</p>
+</li>
+<li><p>使用 “@” 符号可用于引用当前区域的域名</p>
+</li>
+<li><p>同一个名字可以通过多条记录定义多个不同的值；此时DNS服务器会以轮询方式响应</p>
+</li>
+<li><p>同一个值也可能有多个不同的定义名字；通过多个不同的名字指向同一个值进行定义；此仅表示通过多个不同的名字可以找到同一个主机</p>
+</li>
+</ul>
+<h3 id="解析记录类型"><a href="#解析记录类型" class="headerlink" title="解析记录类型"></a>解析记录类型</h3><h4 id="SOA记录"><a href="#SOA记录" class="headerlink" title="SOA记录"></a>SOA记录</h4><p>起始授权记录；一个区域解析库有且仅能有一个SOA记录，必须位于解析库的第一条记录，用于于设置当前DNS服务器的某些规则，规定主服务器，即在众多NS记录里哪一台才是主要的服务器</p>
+<p>SOA 记录表示此DNS是该域名的权威解析服务器，当在查询的过程中，各级缓存都没有要查询的内容时，最后会通过递归查询的方式到达此DNS服务器，并请求此域名的SOA记录</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">magedu.org. 86400 IN SOA ns.magedu.org. nsadmin.magedu.org. (</span><br><span class="line">    2015042201 ;</span><br><span class="line">    2H ;</span><br><span class="line">    10M ;</span><br><span class="line">    1W ;</span><br><span class="line">    1D ;</span><br><span class="line"> )</span><br><span class="line"><span class="comment">#也可以这么写</span></span><br><span class="line">magedu.org. 86400 IN SOA ns.magedu.org. nsadmin.magedu.org. (2015042201 2H 10M 1W 1D)</span><br><span class="line"></span><br><span class="line">ns.magedu.org.		<span class="comment">#DNS服务器名称</span></span><br><span class="line">nsadmin.magedu.org.	<span class="comment">#服务器管理员邮箱</span></span><br><span class="line">2015042201			<span class="comment">#版本号</span></span><br><span class="line">2H					<span class="comment">#从服务器更新间隔</span></span><br><span class="line">10M					<span class="comment">#失败重试间隔</span></span><br><span class="line">1W					<span class="comment">#从服务器数据失效时长</span></span><br><span class="line">1D					<span class="comment">#无效记录缓存时长</span></span><br></pre></td></tr></table></figure>
+
+<p>VALUE 字段中从左到右具体内容如下</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DNS服务器名称</td>
+<td>描述性字段，表示当前DNS服务器名称，注意最后要加 “.”</td>
+</tr>
+<tr>
+<td>服务器管理员邮箱</td>
+<td>邮箱中的@要写成 .</td>
+</tr>
+<tr>
+<td>当前数据库的版本号</td>
+<td>主从服务器要同步数据，此字段就是数据更新的标识，判断数据库有无发生变化，记住改数据库文件后也要改这个版本号，不然主服务器不会推新的数据给从服务器</td>
+</tr>
+<tr>
+<td>从服务器拉取数据的时间间隔</td>
+<td>从服务器在主服务器拉数据的周期</td>
+</tr>
+<tr>
+<td>从服务器同步失败后重试时间间隔</td>
+<td>上次同步失败后，间隔多久重试，假如从服务器在主服务器拉数据时恰好网断了，可以重试</td>
+</tr>
+<tr>
+<td>从服务器同步失败超过多长时间从服务器失败</td>
+<td>同步失败时长超过此值，则认为从服务器数据无效，假如网断了，从服务器迟迟和主服务器连接不上，这时主服务器已经数据更新，从服务器还是老旧的数据，避免这种情况，设置过期时间，超了这个时间，从服务器还是不能与主服务器同步，就不能对外提供服务</td>
+</tr>
+<tr>
+<td>不存在的记录缓存时长</td>
+<td>当查询一个不存在的解析记录时，该记录在指定时间内直接返回不存在，假如有用户查询不存在的东西，那么将这个不存在的东西缓存下来，让用户在一段时间内，如果他查的是不存在的记录，直接结果就是不存在，就不需要去查询，消耗服务器的资源</td>
+</tr>
+</tbody></table>
+<p>注意：</p>
+<ul>
+<li><p>当前区域的主DNS服务器的FQDN，也可以使用当前区域的名字，只是注释功能，可以不需要配置对应的NS记录和A记录</p>
+</li>
+<li><p>当前区域管理员的邮箱地址；但地址中不能使用@符号，一般用 <code>.</code> 替换，例如：<code>admin.magedu.org</code></p>
+</li>
+<li><p>主从服务区域传输相关定义以及否定的答案的统一的TTL</p>
+</li>
+</ul>
+<h4 id="NS记录"><a href="#NS记录" class="headerlink" title="NS记录"></a>NS记录</h4><p>NS记录和SOA记录是任何一个DNS区域都不可或缺的两条记录，NS记录也叫名称服务器记录，用于说明这个区域有哪些DNS服务器负责解析，即说明了在这个区域里，有多少个服务器来承担解析的任务</p>
+<p>一般来说，为了服务的安全可靠，一个域名，至少应该有两条NS记录，保证服务的冗余，防止出现单点失败，即规定从服务器</p>
+<p>注意：</p>
+<ul>
+<li><p>相邻的两个资源记录的name相同时，后续的可省略</p>
+</li>
+<li><p>对NS记录而言，任何一个NS记录后面的服务器名字，都应该在后续有一个A记录</p>
+</li>
+<li><p>一个区域可以有多个NS记录</p>
+</li>
+<li><p>多个从服务器就多条NS记录</p>
+</li>
+<li><p>从服务器的名字可以随便，但是最后都要解析成A记录</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 比如你想查找www.linux-magedu.com，然后linux-magedu.com这个域的解析工作是由dns1.linux-magedu.com和dns2.linux-magedu.com负责的，这时你就知道去dns1.linux-magedu.com服务器或者dns2.linux-magedu.com服务器上去继续查询www.linux-magedu.com，然后这个域名的服务器会向你返回www.linux-magedu.com</span></span><br><span class="line"></span><br><span class="line">linux-magedu.com.    	86400 	IN 	NS 	dns1.linux-magedu.com.</span><br><span class="line">linux-magedu.com.    	86400 	IN 	NS 	dns2.linux-magedu.com.</span><br><span class="line">dns1.linux-magedu.com.  86400 	IN 	A  	10.0.0.206</span><br><span class="line">dns2.linux-magedu.com.  86400 	IN 	A  	10.0.0.208</span><br></pre></td></tr></table></figure>
+
+<h4 id="A记录"><a href="#A记录" class="headerlink" title="A记录"></a>A记录</h4><p>把域名解析为IP，例:<code>www.egonlin.com IN A 1.1.1.1</code></p>
+<p>避免用户写错名称时给错误答案，可通过泛域名解析进行解析至某特定地址</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">www.magedu.org. 		IN 	A 1.1.1.1</span><br><span class="line">www.magedu.org. 		IN 	A 2.2.2.2	<span class="comment"># 如果有多条A记录，且有A记录的IP与DNS机器IP相同，则优先返回</span></span><br><span class="line"></span><br><span class="line">mx1.magedu.org. 		IN  A 3.3.3.3</span><br><span class="line">mx2.magedu.org. 		IN  A 4.4.4.4</span><br><span class="line"></span><br><span class="line"><span class="variable">$GENERATE</span> 1-254 HOST$  	IN 	A 1.2.3.$</span><br><span class="line"></span><br><span class="line">*.magedu.org. 			IN 	A 5.5.5.5	<span class="comment"># 泛解析，匹配所有以magedu.org结束的域名或主机名</span></span><br><span class="line"></span><br><span class="line">magedu.org. 			IN  A 6.6.6.6</span><br><span class="line"></span><br><span class="line">linux-magedu.com. 86400 IN A  10.0.0.167</span><br><span class="line">@   86400 IN A  10.0.0.167 				<span class="comment"># @代表域名，此条记录含义同上</span></span><br></pre></td></tr></table></figure>
+
+<p>范例：阿里云</p>
+<p><img src="/Linux/service-manage/DNS/1753757612572-07f83529-a7fe-44d4-88e2-3b7c8a8549e0-17556846122901.png" alt="null"></p>
+<h4 id="AAAA记录"><a href="#AAAA记录" class="headerlink" title="AAAA记录"></a>AAAA记录</h4><p>将域名转为IPv6地址</p>
+<h4 id="CNAME记录"><a href="#CNAME记录" class="headerlink" title="CNAME记录"></a>CNAME记录</h4><p>把一个域名解析为另外一个域名</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">www.magedu.org. IN CNAME websrv.magedu.org.</span><br></pre></td></tr></table></figure>
+
+<h4 id="PTR记录"><a href="#PTR记录" class="headerlink" title="PTR记录"></a>PTR记录</h4><p>反向DNS解析，即将IPv4或IPv6地址映射回域名</p>
+<p>注意：网络地址及后缀可省略；主机地址依然需要反着写</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#A记录</span></span><br><span class="line">www.magedu.org.	IN A 1.2.3.4</span><br><span class="line"></span><br><span class="line"><span class="comment">#与其对应的PTR记录</span></span><br><span class="line">4.3.2.1.in-addr.arpa. IN PTR www.magedu.org.</span><br><span class="line"><span class="comment">#如1.2.3为网络地址，可简写成：</span></span><br><span class="line">4 IN PTR www.magedu.org.</span><br></pre></td></tr></table></figure>
+
+<h4 id="MX记录"><a href="#MX记录" class="headerlink" title="MX记录"></a>MX记录</h4><p>用于邮件交换，指定邮件服务器，将一个域的电子邮件定向到托管该域用户帐号的服务器(SMTP服务器)</p>
+<p>比如 A 用户向 B 用户发送一封邮件，那么他需要向DNS查询 B 的MX记录，DNS在定位到了 B 的MX记录后反馈给A 用户，然后 A 用户把邮件投递到B用户的MX记录服务器里</p>
+<p>一个域可以定义多条MX记录，但每条MX记录的优先级不同，如果邮件通过最高优先级记录无法递送，则采用第二优先级，以此类推。</p>
+<p>注意：</p>
+<ul>
+<li><p>一个区域内，MX记录可有多个；但每个记录的value之前应该有一个数字(0-99)，表示此服务器的优先级；数字越小优先级越高</p>
+</li>
+<li><p>对MX记录而言，任何一个MX记录后面的服务器名字，都应该在后续有一个A记录</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">magedu.org. IN 	MX 	10 	mx1.magedu.org.</span><br><span class="line">            IN 	MX 	20 	mx2.magedu.org.</span><br><span class="line">mx1 			A  	10.0.0.100</span><br><span class="line">mx2 			A  	10.0.0.200</span><br></pre></td></tr></table></figure>
+
+<h4 id="TXT记录"><a href="#TXT记录" class="headerlink" title="TXT记录"></a>TXT记录</h4><p>对域名进行标识和说明的一种方式，一般做验证记录时会使用此项</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_dnsauth.linux-magedu.com.  86400 IN TXT 2024dtetmvzwclwf6wsl0y6jcpvwga2wkibgyb1a103yd7re2</span><br></pre></td></tr></table></figure>
+
+<h2 id="互联网域名"><a href="#互联网域名" class="headerlink" title="互联网域名"></a>互联网域名</h2><p>域名注册</p>
+<ul>
+<li>代理商：万网, 新网, godaddy</li>
+</ul>
+<p>注册完成以后，想自己用专用服务来解析</p>
+<ul>
+<li>管理后台：把NS记录指向的服务器名称，和A记录指向的服务器地址</li>
+</ul>
+<p><img src="/Linux/service-manage/DNS/1753757612728-01897c2d-a4fc-4264-9b80-b7257910539e-17556846122902.png" alt="null"></p>
+<p>范例：阿里云DNS管理后台界面</p>
+<p><img src="/Linux/service-manage/DNS/1753757613194-873a874e-659d-48a1-a5a5-d382b338edd6-17556846122903.png" alt="null"></p>
+<h2 id="HttpDNS"><a href="#HttpDNS" class="headerlink" title="HttpDNS"></a>HttpDNS</h2><p>HttpDNS是使用HTTP协议向DNS服务器的80端口进行请求，代替传统的DNS协议向DNS服务器的53端口进行请求。也就是使用Http协议去进行DNS解析请求，DNS服务器返回的解析结果（域名对应的服务器IP），直接向该IP发起对应的API服务请求，代替使用域名。</p>
+<p>HttpDNS的原理非常简单，主要有两步：</p>
+<ul>
+<li>客户端直接访问HttpDNS接口，获取业务在域名配置管理系统上配置的访问延迟最优的IP。（基于容灾考虑，还是保留次选使用运营商LocalDNS解析域名的方式）</li>
+<li>客户端向获取到的IP后就向直接往此IP发送业务协议请求。以Http请求为例，通过在header中指定host字段，向HttpDNS返回的IP发送标准的Http请求即可。</li>
+</ul>
+<p>bind 是一款实现DNS服务的开放源码软件，能够提供双向解析，转发，子域授权，view 等功能，使用广泛，目前Internet上半数以上的DNS服务器都是由Bind来实现的</p>
+<h1 id="二、DNS软件bind"><a href="#二、DNS软件bind" class="headerlink" title="二、DNS软件bind"></a>二、DNS软件bind</h1><p>能实现DNS功能的软件有很多，像 bind，powerdns，dnsmasq，unbound，coredns等</p>
+<p>bind 是一款实现DNS服务的开放源码软件，能够提供双向解析，转发，子域授权，view 等功能，使用广泛，目前Internet上半数以上的DNS服务器都是由Bind来实现的</p>
+<h2 id="Centos"><a href="#Centos" class="headerlink" title="Centos"></a>Centos</h2><h3 id="BIND相关程序包"><a href="#BIND相关程序包" class="headerlink" title="BIND相关程序包"></a>BIND相关程序包</h3><ul>
+<li><p>bind：服务器</p>
+</li>
+<li><p>bind-utils: 客户端</p>
+</li>
+<li><p>bind-libs：相关库,依赖关系自动安装</p>
+</li>
+<li><p>bind-chroot: 安全包，将dns相关文件放至 &#x2F;var&#x2F;named&#x2F;chroot&#x2F;</p>
+</li>
+</ul>
+<p>安装bind软件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#dnf -y install <span class="built_in">bind</span> bind-utils</span><br></pre></td></tr></table></figure>
+
+<p>启动服务</p>
+<p>named会开启TCP和UDP的53端口， 953端口是给管理工具使用的</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@centos ~]# systemctl <span class="built_in">enable</span> --now named</span><br></pre></td></tr></table></figure>
+
+<p>将其它机器的DNS指向本机</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky8 ~]#hostname -I</span><br><span class="line">10.0.0.179</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#vim /etc/sysconfig/network-scripts/ifcfg-eth0</span><br><span class="line">DEVICE=eth0</span><br><span class="line">NAME=eth0</span><br><span class="line">BOOTPROTO=none</span><br><span class="line">IPADDR=10.0.0.176</span><br><span class="line">PREFIX=24</span><br><span class="line">GATEWAY=10.0.0.2</span><br><span class="line">DNS1=10.0.0.179</span><br><span class="line">ONBOOT=<span class="built_in">yes</span></span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#nmcli con reload </span><br><span class="line">[root@centos8 ~]#nmcli con up eth0 </span><br><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> /etc/resolv.conf </span><br><span class="line"><span class="comment"># Generated by NetworkManager</span></span><br><span class="line">nameserver 10.0.0.179</span><br><span class="line"></span><br><span class="line"><span class="comment">#失败了，显示不可达</span></span><br><span class="line">[root@centos8 ~]#dig www.baidu.com</span><br><span class="line"></span><br><span class="line">; &lt;&lt;&gt;&gt; DiG 9.11.26-RedHat-9.11.26-6.el8 &lt;&lt;&gt;&gt; www.baidu.com</span><br><span class="line">;; global options: +cmd</span><br><span class="line">;; connection timed out; no servers could be reached</span><br><span class="line"></span><br><span class="line"><span class="comment">#原因是rocky上udp/53指向的是127.0.0.1，而centos的DNS指向的是10.0.0.179</span></span><br><span class="line">[root@rocky8 ~]#ss -ntlu</span><br><span class="line">Netid    State     Recv-Q    Send-Q        Local Address:Port         Peer Address:Port    Process            udp      UNCONN    0         0                 127.0.0.1:53                0.0.0.0:*   </span><br><span class="line"></span><br><span class="line"><span class="comment">#解决方法就是将rocky的udp/53指向所有</span></span><br><span class="line">[root@rocky8 ~]#vim /etc/named.conf</span><br><span class="line">options &#123;</span><br><span class="line">    listen-on port 53 &#123; 127.0.0.1;10.0.0.179; &#125;;	<span class="comment">#第一种，注意要加“;”，但不推荐，万一本机的IP地址变了就不适用了</span></span><br><span class="line">    </span><br><span class="line">options &#123;</span><br><span class="line">    listen-on port 53 &#123; localhost; &#125;;	<span class="comment">#第二种，localhost代表了本机所有的IP</span></span><br><span class="line"></span><br><span class="line">options &#123;</span><br><span class="line">//    listen-on port 53 &#123; 127.0.0.1; &#125;;	<span class="comment">#第三种，加注释，由于是C语言风格，所以加//</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#重启</span></span><br><span class="line">[root@rocky8 ~]#rndc reload</span><br><span class="line">server reload successful</span><br><span class="line"></span><br><span class="line">[root@rocky8 ~]#ss -ntlu</span><br><span class="line">Netid    State     Recv-Q    Send-Q        Local Address:Port         Peer Address:Port    Process            udp      UNCONN    0         0                10.0.0.179:53                0.0.0.0:*  </span><br><span class="line"></span><br><span class="line"><span class="comment">#失败，显示拒绝</span></span><br><span class="line">[root@centos8 ~]#dig www.baidu.com</span><br><span class="line">.....</span><br><span class="line">;; -&gt;&gt;HEADER&lt;&lt;- <span class="string">opcode: QUERY, status: REFUSED, id: 4293	#显示拒绝</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">;; SERVER: 10.0.0.179#53(10.0.0.179)	#但是能连上10.0.0.179</span></span><br><span class="line"><span class="string">.....</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#原因如下</span></span><br><span class="line"><span class="string">[root@rocky8 ~]#vim /etc/named.conf</span></span><br><span class="line"><span class="string">options &#123;</span></span><br><span class="line"><span class="string">    .....</span></span><br><span class="line"><span class="string">    allow-query     &#123; localhost; &#125;;	 #只允许本机IP查询</span></span><br><span class="line"><span class="string">#修改</span></span><br><span class="line"><span class="string">options &#123;</span></span><br><span class="line"><span class="string">    .....</span></span><br><span class="line"><span class="string">    allow-query     &#123; localhost;10.0.0.0/24; &#125;;	#第一种，允许本机和10网段查询，不推荐</span></span><br><span class="line"><span class="string">    </span></span><br><span class="line"><span class="string">options &#123;</span></span><br><span class="line"><span class="string">    .....</span></span><br><span class="line"><span class="string">    allow-query     &#123; localhost;any; &#125;;	#第二种，允许本机和其他所有机器查询</span></span><br><span class="line"><span class="string">    </span></span><br><span class="line"><span class="string">options &#123;</span></span><br><span class="line"><span class="string">    .....</span></span><br><span class="line"><span class="string">//    allow-query     &#123; localhost; &#125;;	#第三种，默认允许所有</span></span><br><span class="line"><span class="string">    </span></span><br><span class="line"><span class="string">[root@rocky8 ~]#rndc reload</span></span><br><span class="line"><span class="string">server reload successful</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#成功</span></span><br><span class="line"><span class="string">[root@centos8 ~]#dig www.baidu.com</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">;; ANSWER SECTION:</span></span><br><span class="line"><span class="string">www.baidu.com.		1200	IN	CNAME	www.a.shifen.com.</span></span><br><span class="line"><span class="string">www.a.shifen.com.	120	IN	A	183.2.172.42</span></span><br><span class="line"><span class="string">www.a.shifen.com.	120	IN	A	183.2.172.185</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#如果将53/udp禁掉</span></span><br><span class="line"><span class="string">[root@rocky8 ~]#iptables -A INPUT -p udp --dport 53 -j REJECT</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#这个时候就失败了</span></span><br><span class="line"><span class="string">[root@centos8 ~]#dig www.baidu.com</span></span><br><span class="line"><span class="string">; &lt;&lt;&gt;&gt; DiG 9.11.26-RedHat-9.11.26-6.el8 &lt;&lt;&gt;&gt; www.baidu.com</span></span><br><span class="line"><span class="string">;; global options: +cmd</span></span><br><span class="line"><span class="string">;; connection timed out; no servers could be reached</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#如果将53/tcp禁掉</span></span><br><span class="line"><span class="string">[root@rocky8 ~]#iptables -R INPUT 1 -p tcp --dport 53 -j REJECT</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#不影响，这说明了udp53端口做解析用的</span></span><br><span class="line"><span class="string">[root@centos8 ~]#dig www.baidu.com</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string">;; ANSWER SECTION:</span></span><br><span class="line"><span class="string">www.baidu.com.		1200	IN	CNAME	www.a.shifen.com.</span></span><br><span class="line"><span class="string">www.a.shifen.com.	120	IN	A	183.2.172.42</span></span><br><span class="line"><span class="string">www.a.shifen.com.	120	IN	A	183.2.172.185</span></span><br><span class="line"><span class="string">......</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#如果将953端口禁掉</span></span><br><span class="line"><span class="string">[root@rocky8 ~]#iptables -R INPUT 1 -p tcp --dport 953 -j REJECT</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#管理工具会使用失败</span></span><br><span class="line"><span class="string">[root@rocky8 ~]#rndc reload</span></span><br><span class="line"><span class="string">rndc: connect failed: 127.0.0.1#953: connection refused</span></span><br></pre></td></tr></table></figure>
+
+<p>自己就是DNS服务器，将DNS指向自己</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#现在指向的是10.0.0.2和100.76.76.76</span></span><br><span class="line">[root@rocky8 ~]#<span class="built_in">cat</span> /etc/resolv.conf</span><br><span class="line"><span class="comment"># Generated by NetworkManager</span></span><br><span class="line">nameserver 10.0.0.2</span><br><span class="line">nameserver 100.76.76.76</span><br><span class="line"></span><br><span class="line"><span class="comment">#修改</span></span><br><span class="line">[root@rocky8 ~]#vim /etc/sysconfig/network-scripts/ifcfg-eth0 </span><br><span class="line">DEVICE=eth0</span><br><span class="line">NAME=eth0</span><br><span class="line">BOOTPROTO=none</span><br><span class="line">IPADDR=10.0.0.179</span><br><span class="line">PREFIX=24</span><br><span class="line">GATEWAY=10.0.0.2</span><br><span class="line">DNS1=127.0.0.1</span><br><span class="line">ONBOOT=<span class="built_in">yes</span></span><br><span class="line"></span><br><span class="line">[root@rocky8 ~]#nmcli con reload</span><br><span class="line">[root@rocky8 ~]#nmcli con up eth0</span><br><span class="line"></span><br><span class="line">[root@rocky8 ~]#<span class="built_in">cat</span> /etc/resolv.conf</span><br><span class="line"><span class="comment"># Generated by NetworkManager</span></span><br><span class="line">nameserver 127.0.0.1</span><br><span class="line"></span><br><span class="line"><span class="comment">#能ping成功，理论上只要安装了DNS服务，就能有解析服务</span></span><br><span class="line">[root@rocky8 ~]#ping www.baidu.com</span><br><span class="line">PING www.a.shifen.com (183.2.172.185) 56(84) bytes of data.</span><br><span class="line">64 bytes from 183.2.172.185 (183.2.172.185): icmp_seq=1 ttl=128 <span class="keyword">time</span>=8.33 ms</span><br><span class="line">64 bytes from 183.2.172.185 (183.2.172.185): icmp_seq=2 ttl=128 <span class="keyword">time</span>=7.95 ms</span><br></pre></td></tr></table></figure>
+
+<p>bind己经内置了13个根域名服务器地址</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@centos ~]# <span class="built_in">cat</span> /var/named/named.ca</span><br><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> /usr/share/dns/root.hints</span><br></pre></td></tr></table></figure>
+
+<p>范例: DNS客户端相关库</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#ping www.baidu.com</span><br><span class="line">PING www.a.shifen.com (110.242.68.4) 56(84) bytes of data.</span><br><span class="line">64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=1 ttl=128 <span class="keyword">time</span>=10.9 ms</span><br><span class="line">64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=2 ttl=128 <span class="keyword">time</span>=10.5 ms</span><br><span class="line">^C</span><br><span class="line">--- www.a.shifen.com ping statistics ---</span><br><span class="line">2 packets transmitted, 2 received, 0% packet loss, <span class="keyword">time</span> 3ms</span><br><span class="line">rtt min/avg/max/mdev = 10.539/10.698/10.857/0.159 ms</span><br><span class="line">[root@centos8 ~]#ldd `<span class="built_in">which</span> ping` | grep libresolv.so</span><br><span class="line">    libresolv.so.2 =&gt; /lib64/libresolv.so.2 (0x00007f230739b000)</span><br><span class="line">    </span><br><span class="line">[root@centos8 ~]#ldd `<span class="built_in">which</span> curl` |grep libresolv.so</span><br><span class="line">    libresolv.so.2 =&gt; /lib64/libresolv.so.2 (0x00007fe95048a000)</span><br></pre></td></tr></table></figure>
+
+<h3 id="BIND包相关文件"><a href="#BIND包相关文件" class="headerlink" title="BIND包相关文件"></a>BIND包相关文件</h3><ul>
+<li><p>BIND主程序：<code>/usr/sbin/named</code></p>
+</li>
+<li><p>服务脚本和Unit名称：<code>/etc/rc.d/init.d/named，/usr/lib/systemd/system/named.service</code></p>
+</li>
+<li><p>主配置文件：<code>/etc/named.conf, /etc/named.rfc1912.zones, /etc/rndc.key</code></p>
+</li>
+<li><p>管理工具：<code>/usr/sbin/rndc</code>，remote name domain controller，默认与bind安装在同一主机，且只能通过127.0.0.1连接named进程，提供辅助性的管理功能；953&#x2F;tcp</p>
+</li>
+<li><p>解析库文件：<code>/var/named/ZONE_NAME.ZONE</code></p>
+</li>
+</ul>
+<p>注意</p>
+<ul>
+<li><p>一台物理服务器可同时为多个区域提供解析</p>
+</li>
+<li><p>必须要有根区域文件；named.ca</p>
+</li>
+<li><p>应该有两个（如果包括ipv6的，应该更多）实现localhost和本地回环地址的解析库</p>
+</li>
+</ul>
+<h3 id="主配置文件-etc-named-conf"><a href="#主配置文件-etc-named-conf" class="headerlink" title="主配置文件 &#x2F;etc&#x2F;named.conf"></a>主配置文件 &#x2F;etc&#x2F;named.conf</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky8 ~]#vim /etc/named.conf </span><br><span class="line">options &#123;</span><br><span class="line">    ....</span><br><span class="line">    directory   <span class="string">&quot;/var/named&quot;</span>;	<span class="comment">#域名数据库文件存放路径</span></span><br><span class="line">    dump-file   <span class="string">&quot;/var/named/data/cache_dump.db&quot;</span>;</span><br><span class="line">    statistics-file <span class="string">&quot;/var/named/data/named_stats.txt&quot;</span>;</span><br><span class="line">    memstatistics-file <span class="string">&quot;/var/named/data/named_mem_stats.txt&quot;</span>;</span><br><span class="line">    secroots-file   <span class="string">&quot;/var/named/data/named.secroots&quot;</span>;</span><br><span class="line">    recursing-file  <span class="string">&quot;/var/named/data/named.recursing&quot;</span>;</span><br><span class="line">    ....</span><br><span class="line">&#125;;</span><br><span class="line">........</span><br><span class="line">include <span class="string">&quot;/etc/named.rfc1912.zones&quot;</span>;</span><br><span class="line">include <span class="string">&quot;/etc/named.root.key&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>配置字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全局配置</td>
+<td>options{};</td>
+<td>全局配置选项</td>
+</tr>
+<tr>
+<td>日志子系统配置</td>
+<td>logging{};</td>
+<td>运行日志</td>
+</tr>
+<tr>
+<td>区域定义</td>
+<td>zone “ZONE_NAME” IN {};</td>
+<td>定义了要解析的域名与具体解析规则之间的对应关系，本机能够为哪些zone进行解析，就要定义哪些zone</td>
+</tr>
+</tbody></table>
+<p>注意：</p>
+<ul>
+<li><p>任何服务程序如果期望其能够通过网络被其它主机访问，至少应该监听在一个能与外部主机通信的</p>
+</li>
+<li><p>IP地址上缓存名称服务器的配置：监听外部地址即可</p>
+</li>
+<li><p>dnssec: 建议关闭dnssec，设为no</p>
+</li>
+</ul>
+<p>常用全局配置选项</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">options &#123;</span><br><span class="line">    <span class="comment">#此配置表示DNS服务只监听了本机127.0.0.1的53端口，如果对外提供DNS服务，可以将此行注释或值改成any</span></span><br><span class="line">    listen-on port 53 &#123; 127.0.0.1; &#125;;</span><br><span class="line">    <span class="comment">#监听IPV6的53端口，配置方法同上</span></span><br><span class="line">    listen-on-v6 port 53 &#123; ::1; &#125;;</span><br><span class="line">    <span class="comment">#监听本机所有IPV6地址，不想监听IPV6地址，可以将 any 改成 none</span></span><br><span class="line">    listen-on-v6 &#123; any; &#125;;</span><br><span class="line">    <span class="comment">#此配置表示仅本机可以使用DNS服务的解析查询功能，如果对外提供DNS服务，可以将此行注释或值改成any</span></span><br><span class="line">    allow-query   &#123; localhost; &#125;;</span><br><span class="line">    <span class="comment">#是否启用加密验证，在使用转发的时候，将此项改为 no</span></span><br><span class="line">    dnssec-validation auto;</span><br><span class="line">    <span class="comment">#转发服务器</span></span><br><span class="line">    forwarders &#123; 10.0.0.207; &#125;;</span><br><span class="line"> 	<span class="comment">#转发策略,具体见后续章节</span></span><br><span class="line">    forward first;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="中间配置文件-etc-named-rfc1912-zones"><a href="#中间配置文件-etc-named-rfc1912-zones" class="headerlink" title="中间配置文件 &#x2F;etc&#x2F;named.rfc1912.zones"></a>中间配置文件 &#x2F;etc&#x2F;named.rfc1912.zones</h3><p><img src="/Linux/service-manage/DNS/1753757613528-7ea879d5-2981-4f98-ae91-8294ee48dec5-17556846122904.png" alt="null"></p>
+<p>定义了要解析的域名与具体解析规则之间的对应关系，本机能够为哪些zone进行解析，就要定义哪些zone</p>
+<p>将自己要配置的域名和域名数据库之间的关联关系都放在这个文件当中，最好不要放在 &#x2F;etc&#x2F;named.conf，这样子不好管理</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky8 ~]#vim /etc/named.rfc1912.zones </span><br><span class="line">......</span><br><span class="line">zone <span class="string">&quot;localhost&quot;</span> IN &#123;			<span class="comment">#IN 可以省略不写</span></span><br><span class="line">    <span class="built_in">type</span> master;				<span class="comment">#类型 master,slave 用于表示DNS主服务器或者从服务器,forward表示转发</span></span><br><span class="line">    file <span class="string">&quot;named.localhost&quot;</span>;		<span class="comment">#具体解析规则文件路径（也就是域名数据库文件）</span></span><br><span class="line">    allow-update &#123; none; &#125;;</span><br><span class="line">&#125;;</span><br><span class="line">......</span><br></pre></td></tr></table></figure>
+
+<h3 id="具体解析规则-var-etc"><a href="#具体解析规则-var-etc" class="headerlink" title="具体解析规则 &#x2F;var&#x2F;etc&#x2F;*"></a>具体解析规则 &#x2F;var&#x2F;etc&#x2F;*</h3><p>该文件定义域名的具体解析规则，该文件有多条资源记录组成，每一行都是一条资源记录，在RFC文档中，DNS解析记录被称为Resource Recode（资源记录），缩写为 RR</p>
+<h2 id="Ubuntu"><a href="#Ubuntu" class="headerlink" title="Ubuntu"></a>Ubuntu</h2><h3 id="BIND相关程序包-1"><a href="#BIND相关程序包-1" class="headerlink" title="BIND相关程序包"></a>BIND相关程序包</h3><ul>
+<li><p>bind9：服务器</p>
+</li>
+<li><p>bind9-utils: 客户端</p>
+</li>
+<li><p>bind9-libs：相关库,依赖关系自动安装</p>
+</li>
+<li><p>bind9-chroot: 安全包，将dns相关文件放至 &#x2F;var&#x2F;named&#x2F;chroot&#x2F;</p>
+</li>
+</ul>
+<p>安装bind软件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#apt -y install bind9 bind9-utils</span><br></pre></td></tr></table></figure>
+
+<p>启动服务</p>
+<p>named会开启TCP和UDP的53端口， 953端口是给管理工具使用的</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# systemctl <span class="built_in">enable</span> --now named.service</span><br></pre></td></tr></table></figure>
+
+<h3 id="BIND包相关文件-1"><a href="#BIND包相关文件-1" class="headerlink" title="BIND包相关文件"></a>BIND包相关文件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu <span class="built_in">bind</span>]# dpkg -L bind9</span><br><span class="line">......</span><br><span class="line">/etc/bind</span><br><span class="line">/etc/bind/bind.keys</span><br><span class="line">/etc/bind/db.0 		 <span class="comment">#db.* 名具体解析规则文件</span></span><br><span class="line">/etc/bind/db.127</span><br><span class="line">/etc/bind/db.255</span><br><span class="line">/etc/bind/db.empty</span><br><span class="line">/etc/bind/db.local</span><br><span class="line">/etc/bind/named.conf <span class="comment">#主配置文件</span></span><br><span class="line">/etc/bind/named.conf.default-zones <span class="comment">#中间配置文件，该文件中定义了域名和具体解析规则文件的对应关系</span></span><br><span class="line">/etc/bind/named.conf.local <span class="comment">#中间配置文件，引用/etc/bind/zones.rfc1918，被注释</span></span><br><span class="line">/etc/bind/named.conf.options <span class="comment">#bind配置项</span></span><br><span class="line">/etc/bind/zones.rfc1918 <span class="comment">#中间配置文件，该文件中定义了域名和具体解析规则文件的对应关系</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/service-manage/DNS/1753757613845-680c59ee-47b9-40da-811c-b51d2a832e28-17556846122906.png" alt="null"></p>
+<h3 id="主配置文件-etc-bind-named-conf"><a href="#主配置文件-etc-bind-named-conf" class="headerlink" title="主配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf"></a>主配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu <span class="built_in">bind</span>]# <span class="built_in">cat</span> /etc/bind/named.conf</span><br><span class="line">......</span><br><span class="line">include <span class="string">&quot;/etc/bind/named.conf.options&quot;</span>;</span><br><span class="line">include <span class="string">&quot;/etc/bind/named.conf.local&quot;</span>;</span><br><span class="line">include <span class="string">&quot;/etc/bind/named.conf.default-zones&quot;</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="选项配置文件-etc-bind-named-conf-options"><a href="#选项配置文件-etc-bind-named-conf-options" class="headerlink" title="选项配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.options"></a>选项配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.options</h3><p>该文件主要包括以下几部份内容，默认只有全局配置部份</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>配置字段</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全局配置</td>
+<td>options{};</td>
+<td>全局配置选项</td>
+</tr>
+<tr>
+<td>日志子系统配置</td>
+<td>logging{};</td>
+<td>运行日志</td>
+</tr>
+<tr>
+<td>网络自定义集合</td>
+<td>acl</td>
+<td>将某个网段或某个具体IP地址定义在一个集合里面</td>
+</tr>
+<tr>
+<td>视图</td>
+<td>view</td>
+<td>配合acl将不同的请求来源用不同的解析规则返回，实现智能DNS</td>
+</tr>
+</tbody></table>
+<p>常用全局配置选项</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">options &#123;</span><br><span class="line">    <span class="comment">#此配置表示DNS服务只监听了本机127.0.0.1的53端口，如果对外提供DNS服务，可以将此行注释或值改成any</span></span><br><span class="line">    listen-on port 53 &#123; 127.0.0.1; &#125;;</span><br><span class="line">    <span class="comment">#监听IPV6的53端口，配置方法同上</span></span><br><span class="line">    listen-on-v6 port 53 &#123; ::1; &#125;;</span><br><span class="line">    <span class="comment">#监听本机所有IPV6地址，不想监听IPV6地址，可以将 any 改成 none</span></span><br><span class="line">    listen-on-v6 &#123; any; &#125;;</span><br><span class="line">    <span class="comment">#此配置表示仅本机可以使用DNS服务的解析查询功能，如果对外提供DNS服务，可以将此行注释或值改成any</span></span><br><span class="line">    allow-query   &#123; localhost; &#125;;</span><br><span class="line">    <span class="comment">#是否启用加密验证，在使用转发的时候，将此项改为 no</span></span><br><span class="line">    dnssec-validation auto;</span><br><span class="line">    <span class="comment">#转发服务器</span></span><br><span class="line">    forwarders &#123; 10.0.0.207; &#125;;</span><br><span class="line"> 	<span class="comment">#转发策略,具体见后续章节</span></span><br><span class="line">    forward first;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="中间配置文件-etc-bind-named-conf-default-zones"><a href="#中间配置文件-etc-bind-named-conf-default-zones" class="headerlink" title="中间配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.default-zones"></a>中间配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.default-zones</h3><p>该文件中定义了要解析的域名与具体解析规则之间的对应关系</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">zone <span class="string">&quot;ZONE_NAME&quot;</span> IN &#123; <span class="comment">#IN 可以省略不写</span></span><br><span class="line">    <span class="built_in">type</span> &#123;master|slave|hint|forward&#125;; <span class="comment">#类型 master,slave 用于DNS主从,forward表示转发</span></span><br><span class="line">    file <span class="string">&quot;file_path&quot;</span>; <span class="comment">#具体解析规则文件路径</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="具体解析规则-etc-bind-db"><a href="#具体解析规则-etc-bind-db" class="headerlink" title="具体解析规则 &#x2F;etc&#x2F;bind&#x2F;db.*"></a>具体解析规则 &#x2F;etc&#x2F;bind&#x2F;db.*</h3><p>该文件定义域名的具体解析规则，该文件有多条资源记录组成，每一行都是一条资源记录，在RFC文档中，DNS解析记录被称为Resource Recode（资源记录），缩写为 RR</p>
+<h2 id="allow-访问控制指令"><a href="#allow-访问控制指令" class="headerlink" title="allow 访问控制指令"></a>allow 访问控制指令</h2><p>在named配置中有四个allow开头的字段，主要用来实现访问控制</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>allow-query{};</td>
+<td>允许查询本DNS的主机，白名单，注释就代表所有主机都可使用本机当DNS</td>
+</tr>
+<tr>
+<td>allow-transfer{};</td>
+<td>允许区域传送的主机，白名单，注释代表所有，一般用在主从DNS配置时指定从节点</td>
+</tr>
+<tr>
+<td>allow-recursion{};</td>
+<td>允许递归的主机,建议全局使用</td>
+</tr>
+<tr>
+<td>allow-update{};</td>
+<td>允许可以远程更新解析规则的主机</td>
+</tr>
+</tbody></table>
+<h1 id="三、DNS测试和管理工具"><a href="#三、DNS测试和管理工具" class="headerlink" title="三、DNS测试和管理工具"></a>三、DNS测试和管理工具</h1><h2 id="dig-命令"><a href="#dig-命令" class="headerlink" title="dig 命令"></a>dig 命令</h2><p>dig只用于测试dns系统，不会查询本地 hosts文件中定义的域名和IP对应关系</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# apt install bind9</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">dig [@global-server] [domain] [q-type] [q-class] &#123;q-opt&#125;</span><br><span class="line">     &#123;global-d-opt&#125; host [@local-server] &#123;local-d-opt&#125;</span><br><span class="line">     [ host [@local-server] &#123;local-d-opt&#125; [...]]   </span><br><span class="line">     </span><br><span class="line">dig [-t <span class="built_in">type</span>] name [@SERVER] [query options]</span><br><span class="line"></span><br><span class="line"><span class="comment">#参数说明</span></span><br><span class="line">@global-server 			<span class="comment">#指定DNS服务器</span></span><br><span class="line">domain 					<span class="comment">#要查询的域名</span></span><br><span class="line">q-type 					<span class="comment">#要查询的记录类型(a,any,mx,ns,soa,hinfo,axfr,txt,...)，默认a</span></span><br><span class="line">q-class 				<span class="comment">#要查询的解析类型(in|hs|ch)，默认 in</span></span><br><span class="line">d-opt 					<span class="comment">#查询选项</span></span><br><span class="line">    +[no]trace 			<span class="comment">#是否追踪查询过程</span></span><br><span class="line">    +[no]cmd 			<span class="comment">#是否在查询结果中显示头信息</span></span><br><span class="line">    +[no]recurse 		<span class="comment">#是否进行递归解析查询</span></span><br><span class="line">    +[no]all 			<span class="comment">#是否显示所有信息，如果否，要指明具体显示内容</span></span><br><span class="line">    +[no]answer     	<span class="comment">#是否显示answer部份</span></span><br><span class="line">    +[no]question 		<span class="comment">#是否显示question部份</span></span><br><span class="line">    +[no]authority  	<span class="comment">#是否显示authority部份</span></span><br><span class="line">    +[no]comment 		<span class="comment">#是否显示comment部份</span></span><br><span class="line">    +[no]<span class="built_in">stat</span> 			<span class="comment">#是否显示status部份</span></span><br><span class="line">    +[no]short 			<span class="comment">#是否只显示关键信息</span></span><br><span class="line">q-opt 					<span class="comment">#选项</span></span><br><span class="line">    -h 					<span class="comment">#显示帮助</span></span><br><span class="line">    -v 					<span class="comment">#显示版本号</span></span><br><span class="line">    -4         			<span class="comment">#仅查询IPV4的DNS服务器</span></span><br><span class="line">    -6         			<span class="comment">#仅查询IPV6的DNS服务器</span></span><br><span class="line">    -b address[#port]  	<span class="comment">#使用指定客户端IP去查询DNS</span></span><br><span class="line">    -f filename     	<span class="comment">#从文件中获取要查询的域名</span></span><br><span class="line">    -p port       		<span class="comment">#指定DNS服务查询端口</span></span><br><span class="line">    -t <span class="built_in">type</span>       		<span class="comment">#指定要查询的资源记录类型A|NS|AAA|PTR|...</span></span><br><span class="line">    -u         			<span class="comment">#以微秒显示打印时间</span></span><br><span class="line">    -x dot-notation   	<span class="comment">#反向解析</span></span><br><span class="line">    </span><br><span class="line"><span class="comment">#常用组合</span></span><br><span class="line">dig domain</span><br><span class="line">dig @dns-erver domain | dig domain @dns-server</span><br><span class="line">dig -t q-type domain | dig domain q-type</span><br><span class="line">git -x IP | dig -t ptr reverseIP.in-addr.arpa <span class="comment">#reverseIP 表示将要查询的IP倒序输出</span></span><br></pre></td></tr></table></figure>
+
+<p>范例：查询DNS解析，使用默认DNS服务器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# dig www.jose-404.com</span><br><span class="line">; &lt;&lt;&gt;&gt; DiG 9.18.12-0ubuntu0.22.04.1-Ubuntu &lt;&lt;&gt;&gt; www.jose-404.com	<span class="comment">#dig命令版本和参数，查询参数为www.jose-404.com</span></span><br><span class="line">;; global options: +cmd												<span class="comment">#默认选项，此项表示显示头部软件版本和参数信息</span></span><br><span class="line"><span class="comment">#查询结果</span></span><br><span class="line">;; Got answer:</span><br><span class="line">;; -&gt;&gt;HEADER&lt;&lt;- <span class="string">opcode: QUERY, status: NOERROR, id: 2948			#QUERY 表示是执行查询操作，NOERROR 表示解析成功，id: 12947 此次查询的ID，在dns协议中，通过ID编号匹配查询请求和返回结果</span></span><br><span class="line"><span class="string">;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1</span></span><br><span class="line"><span class="string">#flags: qr rd ra 标志位</span></span><br><span class="line"><span class="string">#qr(query，查询标志，代表查询操作)</span></span><br><span class="line"><span class="string">#rd(recursion desired, 表示客户端希望进行递归查询)</span></span><br><span class="line"><span class="string">#ra(recursive available, 表示DNS服务器支持递归查询)</span></span><br><span class="line"><span class="string">#aa(Authoritative Answer, 权威回复，如果查询结果由管理域名的域名服务器而不是缓存服务器提供的，则称为权威回复)</span></span><br><span class="line"><span class="string">#QUERY: 1 查询数，表示1个查询，对应下面 QUESTION SECTION中的记录数</span></span><br><span class="line"><span class="string">#ANSWER: 13 查询结果，表示有13个查询结果，对应下面 ANSWER SECTION 中的记录数</span></span><br><span class="line"><span class="string">#AUTHORITY: 0 权威域名服务器记录数量，此处表示有0个权威域名服务器</span></span><br><span class="line"><span class="string">#ADDITIONAL: 1 额外记录数量，此处表示有1个额外记录，此处缺失该部份内容</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#选项</span></span><br><span class="line"><span class="string">;; OPT PSEUDOSECTION:</span></span><br><span class="line"><span class="string">#EDNS: Extended DNS 扩展用户数据报文协议</span></span><br><span class="line"><span class="string">#version:0 协议版本为 0</span></span><br><span class="line"><span class="string">#flag:; 标记位为空</span></span><br><span class="line"><span class="string">#udp:65494 数据包大小</span></span><br><span class="line"><span class="string">; EDNS: version: 0, flags:; udp: 65494</span></span><br><span class="line"><span class="string">#查询域名，此处表示查www.jose-404.com</span></span><br><span class="line"><span class="string">;; QUESTION SECTION:</span></span><br><span class="line"><span class="string">;www.jose-404.com. IN A</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">#具体查询结果</span></span><br><span class="line"><span class="string">;; ANSWER SECTION:</span></span><br><span class="line"><span class="string">www.jose-404.com. 1 IN A 47.94.245.255</span></span><br><span class="line"><span class="string">#第一列是要要询的域名</span></span><br><span class="line"><span class="string">#第二列是TTL(time to live),表示该记录的缓存时间，单位是秒</span></span><br><span class="line"><span class="string">#第三列是要查询的信息类型，IN代表类别为IP协议，即Internet</span></span><br><span class="line"><span class="string">#第四列是要查询的记录类型，NS表示name server，即域名服务器</span></span><br><span class="line"><span class="string">#第五列表示查询得到的值</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">;; Query time: 15 msec							#本次查询消耗时长</span></span><br><span class="line"><span class="string">;; SERVER: 127.0.0.53#53(127.0.0.53) (UDP)		#DNS服务器为10.0.0.2 端口是53</span></span><br><span class="line"><span class="string">;; WHEN: Tue May 30 16:46:53 CST 2023			#查询时间</span></span><br><span class="line"><span class="string">;; MSG SIZE rcvd: 61							#返回内容长度为61字节</span></span><br></pre></td></tr></table></figure>
+
+<p>范例：指定DNS服务器，指定本机请求DNS服务的IP</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# dig www.jose-404.com @114.114.114.114 -b 10.0.0.206</span><br></pre></td></tr></table></figure>
+
+<p>范例：反向解析</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#两种方法</span></span><br><span class="line">[root@rocky86 ~]# dig -x 47.94.245.255 +nocmd</span><br><span class="line">[root@ubuntu ~]# dig -t ptr 255.245.94.47.in-addr.arpa +nocmd</span><br></pre></td></tr></table></figure>
+
+<p>范例：短格式</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# dig www.jose-404.com +short</span><br><span class="line">47.94.245.255</span><br></pre></td></tr></table></figure>
+
+<p>范例：从文件中获取要查询的域名</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> domain.txt</span><br><span class="line">www.baidu.com</span><br><span class="line">www.jd.com</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# dig -f domain.txt +short</span><br><span class="line">www.a.shifen.com.</span><br><span class="line">124.237.176.4</span><br><span class="line">124.237.176.3</span><br><span class="line">www.jd.com.gslb.qianxun.com.</span><br><span class="line">www.jd.com.s.galileo.jcloud-cdn.com.</span><br><span class="line">wwwv6.jcloudimg.com.</span><br><span class="line">111.225.218.3</span><br></pre></td></tr></table></figure>
+
+<p>范例：只查询别名解析</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# dig -t cname www.jd.com</span><br><span class="line">......</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# dig www.jd.com <span class="keyword">in</span> cname</span><br><span class="line">.....</span><br></pre></td></tr></table></figure>
+
+<p>范例：模拟区域传送</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">dig -t axfr ZONE_NAME @SERVER</span><br><span class="line">dig -t axfr magedu.org @10.10.10.11</span><br><span class="line">dig –t axfr 100.1.10.in-addr.arpa @172.16.1.1</span><br><span class="line">dig -t NS . @114.114.114.114</span><br><span class="line">dig -t NS . @a.root-servers.net</span><br></pre></td></tr></table></figure>
+
+<h2 id="host命令"><a href="#host命令" class="headerlink" title="host命令"></a>host命令</h2><p>host 命令可以根据域名查询得到对应的服务器IP地址，不会查询本地 hosts文件中定义的域名和IP对应关系</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">host [option] hostname [server]</span><br><span class="line"></span><br><span class="line">a  <span class="comment">#显示所有信息</span></span><br><span class="line">-c <span class="comment">#指定查询类型 HS|CH|IN</span></span><br><span class="line">-C <span class="comment">#查询SOA</span></span><br><span class="line">-d <span class="comment">#同 -v</span></span><br><span class="line">-p <span class="comment">#指定端口</span></span><br><span class="line">-r <span class="comment">#不递归查询</span></span><br><span class="line">-t <span class="comment">#指定查询类型 CNAME|NS|SOA|TXT|DNSKEY|AXFR|...</span></span><br><span class="line">-T <span class="comment">#使用TCP进行DNS查询</span></span><br><span class="line">-U <span class="comment">#使用UDP进行DNS查询</span></span><br><span class="line">-v <span class="comment">#显示执行过程</span></span><br><span class="line">-V <span class="comment">#显示命令版本</span></span><br><span class="line">-w <span class="comment">#如果没有查询结果，则阻塞，一直等待</span></span><br><span class="line">-W N <span class="comment">#等待N秒后超时</span></span><br><span class="line">-4 <span class="comment">#仅查询IPV4的DNS server</span></span><br><span class="line">-6 <span class="comment">#仅查询IPV4的DNS server</span></span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# host www.magedu.com</span><br><span class="line">www.magedu.com has address 10.0.0.206</span><br><span class="line"></span><br><span class="line">[root@ubuntu ~]# host www.baidu.com</span><br><span class="line">www.baidu.com is an <span class="built_in">alias</span> <span class="keyword">for</span> www.a.shifen.com.</span><br><span class="line">www.a.shifen.com has address 124.237.176.3</span><br><span class="line">www.a.shifen.com has address 124.237.176.4</span><br></pre></td></tr></table></figure>
+
+<p>范例：指定DNS服务器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# host www.magedu.com 114.114.114.114</span><br><span class="line">Using domain server:</span><br><span class="line">Name: 114.114.114.114</span><br><span class="line">Address: 114.114.114.114#53</span><br><span class="line">Aliases:</span><br><span class="line">www.magedu.com has address 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">host -t NS magedu.org 172.16.0.1</span><br><span class="line">host -t soa magedu.org</span><br><span class="line">host -t mx magedu.org</span><br><span class="line">host -t axfr magedu.org</span><br><span class="line">host 1.2.3.4</span><br></pre></td></tr></table></figure>
+
+<h2 id="nslookup命令"><a href="#nslookup命令" class="headerlink" title="nslookup命令"></a>nslookup命令</h2><p>nslookup：主要用来查询DNS记录，查看域名解析是否正常，也可用来诊断网络问题</p>
+<ul>
+<li>支持交互式和非交互式两种执行方式，在Windows系统中和Linux系统中都可以使用</li>
+<li>不会查询本地 hosts文件中定义的域名和IP对应关系，也不能查询dns的递归或者迭代</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">nslookup [-option] [name | -] [server]</span><br><span class="line"></span><br><span class="line">-<span class="built_in">type</span>  <span class="comment">#指定查询类型 A|AAAA|CNAME|...</span></span><br></pre></td></tr></table></figure>
+
+<p>范例：交互式模式</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">nslookup&gt;</span><br><span class="line">server IP: 指明使用哪个DNS server进行查询</span><br><span class="line"><span class="built_in">set</span> q=RR_TYPE: 指明查询的资源记录类型</span><br><span class="line">NAME: 要查询的名称</span><br></pre></td></tr></table></figure>
+
+<p>范例：非交互式查询</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# nslookup www.magedu.com</span><br><span class="line">Server: 127.0.0.53</span><br><span class="line">Address: 127.0.0.53#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name: www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<p>范例：交换式查询</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# nslookup</span><br><span class="line">&gt; www.magedu.com</span><br><span class="line">Server:		127.0.0.53</span><br><span class="line">Address:	127.0.0.53#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name:   www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<p>范例：指定DNS服务器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#非交互式</span></span><br><span class="line">[root@ubuntu ~]# nslookup www.magedu.com 114.114.114.114</span><br><span class="line">Server:		114.114.114.114</span><br><span class="line">Address:	114.114.114.114#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name:   www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br><span class="line"></span><br><span class="line"><span class="comment">#交互式</span></span><br><span class="line">[root@ubuntu ~]# nslookup</span><br><span class="line">&gt; server 223.5.5.5</span><br><span class="line">Default server: 223.5.5.5</span><br><span class="line">Address: 223.5.5.5#53</span><br><span class="line"></span><br><span class="line">&gt; www.magedu.com</span><br><span class="line">;; communications error to 223.5.5.5#53: timed out</span><br><span class="line">Server:		223.5.5.5</span><br><span class="line">Address:	223.5.5.5#53</span><br><span class="line"></span><br><span class="line">Non-authoritative answer:</span><br><span class="line">Name:   www.magedu.com</span><br><span class="line">Address: 140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<p>范例：指定查询类型</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# nslookup -<span class="built_in">type</span>=cname www.baidu.com</span><br></pre></td></tr></table></figure>
+
+<p>范例：查看默认信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# nslookup</span><br><span class="line">&gt; <span class="built_in">set</span> all</span><br></pre></td></tr></table></figure>
+
+<p>范例：Windows系统中使用</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">C:\Users\44301&gt;nslookup</span><br><span class="line">默认服务器:  xd-cache-1.bjtelecom.net</span><br><span class="line">Address:  219.141.136.10</span><br><span class="line"></span><br><span class="line">&gt; www.magedu.com</span><br><span class="line">服务器:  xd-cache-1.bjtelecom.net</span><br><span class="line">Address:  219.141.136.10</span><br><span class="line"></span><br><span class="line">非权威应答:</span><br><span class="line">名称:    www.magedu.com</span><br><span class="line">Address:  140.143.156.192</span><br></pre></td></tr></table></figure>
+
+<h2 id="rndc-命令"><a href="#rndc-命令" class="headerlink" title="rndc 命令"></a>rndc 命令</h2><p>rndc 是 bind 程序的客户端工具，默认使用 TCP的 953 端口连接 bind 服务器，进行管理DNS</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">rndc COMMAND</span><br><span class="line">COMMAND:</span><br><span class="line">    status: 查看状态</span><br><span class="line">    reload: 重载主配置文件和区域解析库文件</span><br><span class="line">    reload zonename: 重载区域解析库文件</span><br><span class="line">    retransfer zonename: 手动启动区域传送，而不管序列号是否增加</span><br><span class="line">    notify zonename: 重新对区域传送发通知</span><br><span class="line">    reconfig: 重载主配置文件</span><br><span class="line">    querylog: 开启或关闭查询日志文件/var/log/message</span><br><span class="line">    trace: 递增debug一个级别</span><br><span class="line">    trace LEVEL: 指定使用的级别</span><br><span class="line">    notrace：将调试级别设置为 0</span><br><span class="line">    flush：清空DNS服务器的所有缓存记录</span><br></pre></td></tr></table></figure>
+
+<p>重启主配置文件和区域解析库文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#相当于systemctl restart named，使用前提是named服务已经开启</span></span><br><span class="line">[root@centos ~]#rndc reload</span><br></pre></td></tr></table></figure>
+
+<h2 id="whois-命令"><a href="#whois-命令" class="headerlink" title="whois 命令"></a>whois 命令</h2><p>whois 命令可以查询域名注册信息</p>
+<p>范例: whois 查询域名信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#yum -y install whois</span><br><span class="line">[root@centos7 ~]#whois magedu.com</span><br></pre></td></tr></table></figure>
+
+<p>可以从网站查询信息,查询链接</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://www.toolnb.com/domaininfo/wangxiaochun.com.html</span><br></pre></td></tr></table></figure>
+
+<h1 id="四、在公有云上配置DNS解析"><a href="#四、在公有云上配置DNS解析" class="headerlink" title="四、在公有云上配置DNS解析"></a>四、在公有云上配置DNS解析</h1><p>要在互联网上运行一个可以被访问的项目，我们至少需要一个域名，一个服务器，一个固定IP地址。</p>
+<p>目前国内主流的公有云平台包括阿里云，腾迅云，华为云，亚马逊云(AWS) 等。</p>
+<p>这些平台都提供云主机，域名注册与解析等服务，过程也大相径庭。</p>
+<p>我们以阿里云平台为例，描述一下在公有云平台上配置域名解析的过程</p>
+<p>打开阿里云官网 <a target="_blank" rel="noopener" href="https://account.aliyun.com/">https://account.aliyun.com/</a></p>
+<p>当我们己经购买了域名和主机后，就可以开始配置域名解析工作了</p>
+<p>在左侧控制台中，选择 <code>云解析DNS</code>，进入 <code>域名解析</code> 页面</p>
+<p>在列表中选择要进行解析的域名，点击操作列中的 解析设置</p>
+<p><img src="/Linux/service-manage/DNS/1753757614529-f379fe0c-4aff-4eec-8413-52fbd944a301-17556846122905.png" alt="null"></p>
+<p>点击 <code>添加记录</code></p>
+<p><img src="/Linux/service-manage/DNS/1753757614582-6399a875-9a67-4f97-a51f-bffdacd70441-17556846122907.png" alt="null"></p>
+<p>参数说明</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>说明</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>记录类型</td>
+<td>解析类型，默认选A，将域名解析到服务器IP</td>
+<td>A</td>
+</tr>
+<tr>
+<td>解析请求来源</td>
+<td>指定只响应符合来源的解析请求</td>
+<td>默认值</td>
+</tr>
+<tr>
+<td>记录值</td>
+<td>填写主机域名对应的服务器的IP地址</td>
+<td>47.92.245.255</td>
+</tr>
+<tr>
+<td>TTL</td>
+<td>解析结果在本地DNS缓存中的生命周期时长</td>
+<td>10分钟</td>
+</tr>
+</tbody></table>
+<p>测试解析状态</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# ping www.jose-404.com -c1</span><br><span class="line">PING www.jose-404.com (47.94.245.255) 56(84) bytes of data.</span><br><span class="line">64 bytes from 47.94.245.255 (47.94.245.255): icmp_seq=1 ttl=128 <span class="keyword">time</span>=10.2 ms</span><br><span class="line">--- www.jose-404.com ping statistics ---</span><br><span class="line">1 packets transmitted, 1 received, 0% packet loss, <span class="keyword">time</span> 0ms</span><br><span class="line">rtt min/avg/max/mdev = 10.248/10.248/10.248/0.000 ms</span><br></pre></td></tr></table></figure>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/Linux/service-manage/DNS/">https://aquapluto.github.io/Linux/service-manage/DNS/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%9C%8D%E5%8A%A1%E7%AE%A1%E7%90%86/">服务管理</a></div><div class="post-share"><div class="social-share" data-image="/img/paper4.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/Linux/service-manage/time-synchronization/" title="时间同步服务"><img class="cover" src="/img/paper1.jpg" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">时间同步服务</div></div><div class="info-2"><div class="info-item-1">前言加密和安全当前都离不开时间的同...</div></div></div></a><a class="pagination-related" href="/Linux/shell/introduce/" title="shell脚本介绍"><img class="cover" src="/img/paper5.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">shell脚本介绍</div></div><div class="info-2"><div class="info-item-1">脚本基本结构格式要求：首行sheb...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux/service-manage/log/" title="日志服务"><img class="cover" src="/img/paper2.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-20</div><div class="info-item-2">日志服务</div></div><div class="info-2"><div class="info-item-1">1 系统日志管理1.1 系统日志介...</div></div></div></a><a class="pagination-related" href="/Linux/service-manage/plan-tasks/" title="计划任务"><img class="cover" src="/img/paper3.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-20</div><div class="info-item-2">计划任务</div></div><div class="info-2"><div class="info-item-1">一次性任务at 工具  由包 at...</div></div></div></a><a class="pagination-related" href="/Linux/service-manage/file-share/" title="文件共享服务"><img class="cover" src="/img/paper6.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-20</div><div class="info-item-2">文件共享服务</div></div><div class="info-2"><div class="info-item-1">1 存储介绍IT 基础设施有三个主...</div></div></div></a><a class="pagination-related" href="/Linux/service-manage/ssh/" title="ssh远程连接服务"><img class="cover" src="/img/paper2.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">ssh远程连接服务</div></div><div class="info-2"><div class="info-item-1">1 ssh服务介绍ssh: sec...</div></div></div></a><a class="pagination-related" href="/Linux/service-manage/time-synchronization/" title="时间同步服务"><img class="cover" src="/img/paper1.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-20</div><div class="info-item-2">时间同步服务</div></div><div class="info-2"><div class="info-item-1">前言加密和安全当前都离不开时间的同...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E3%80%81DNS%E6%9C%8D%E5%8A%A1%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5%E5%92%8C%E6%8A%80%E6%9C%AF"><span class="toc-text">一、DNS服务相关概念和技术</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#linux%E4%B8%8A%E7%9A%84DNS%E6%96%87%E4%BB%B6"><span class="toc-text">linux上的DNS文件</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#etc-hosts"><span class="toc-text">&#x2F;etc&#x2F;hosts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#etc-resolv-conf"><span class="toc-text">&#x2F;etc&#x2F;resolv.conf</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#etc-nsswitch-conf"><span class="toc-text">&#x2F;etc&#x2F;nsswitch.conf</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Ubuntu%E4%B8%AD%E7%9A%84-systemd-resolved-%E6%9C%8D%E5%8A%A1"><span class="toc-text">Ubuntu中的 systemd-resolved 服务</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E5%88%86%E7%B1%BB"><span class="toc-text">DNS服务器的分类</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS%E8%A7%A3%E6%9E%90%E7%AD%94%E6%A1%88"><span class="toc-text">DNS解析答案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS%E8%A7%A3%E6%9E%90%E7%9A%84%E4%BC%98%E5%85%88%E7%BA%A7"><span class="toc-text">DNS解析的优先级</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DNS%E8%B5%84%E6%BA%90%E8%AE%B0%E5%BD%95"><span class="toc-text">DNS资源记录</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B5%84%E6%BA%90%E8%AE%B0%E5%BD%95%E5%AE%9A%E4%B9%89"><span class="toc-text">资源记录定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%A3%E6%9E%90%E8%AE%B0%E5%BD%95%E7%B1%BB%E5%9E%8B"><span class="toc-text">解析记录类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#SOA%E8%AE%B0%E5%BD%95"><span class="toc-text">SOA记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#NS%E8%AE%B0%E5%BD%95"><span class="toc-text">NS记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#A%E8%AE%B0%E5%BD%95"><span class="toc-text">A记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#AAAA%E8%AE%B0%E5%BD%95"><span class="toc-text">AAAA记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#CNAME%E8%AE%B0%E5%BD%95"><span class="toc-text">CNAME记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#PTR%E8%AE%B0%E5%BD%95"><span class="toc-text">PTR记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#MX%E8%AE%B0%E5%BD%95"><span class="toc-text">MX记录</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#TXT%E8%AE%B0%E5%BD%95"><span class="toc-text">TXT记录</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%92%E8%81%94%E7%BD%91%E5%9F%9F%E5%90%8D"><span class="toc-text">互联网域名</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HttpDNS"><span class="toc-text">HttpDNS</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8C%E3%80%81DNS%E8%BD%AF%E4%BB%B6bind"><span class="toc-text">二、DNS软件bind</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Centos"><span class="toc-text">Centos</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BIND%E7%9B%B8%E5%85%B3%E7%A8%8B%E5%BA%8F%E5%8C%85"><span class="toc-text">BIND相关程序包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BIND%E5%8C%85%E7%9B%B8%E5%85%B3%E6%96%87%E4%BB%B6"><span class="toc-text">BIND包相关文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BB%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-etc-named-conf"><span class="toc-text">主配置文件 &#x2F;etc&#x2F;named.conf</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-etc-named-rfc1912-zones"><span class="toc-text">中间配置文件 &#x2F;etc&#x2F;named.rfc1912.zones</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E8%A7%A3%E6%9E%90%E8%A7%84%E5%88%99-var-etc"><span class="toc-text">具体解析规则 &#x2F;var&#x2F;etc&#x2F;*</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Ubuntu"><span class="toc-text">Ubuntu</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BIND%E7%9B%B8%E5%85%B3%E7%A8%8B%E5%BA%8F%E5%8C%85-1"><span class="toc-text">BIND相关程序包</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BIND%E5%8C%85%E7%9B%B8%E5%85%B3%E6%96%87%E4%BB%B6-1"><span class="toc-text">BIND包相关文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BB%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-etc-bind-named-conf"><span class="toc-text">主配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%80%89%E9%A1%B9%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-etc-bind-named-conf-options"><span class="toc-text">选项配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.options</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%AD%E9%97%B4%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-etc-bind-named-conf-default-zones"><span class="toc-text">中间配置文件 &#x2F;etc&#x2F;bind&#x2F;named.conf.default-zones</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E8%A7%A3%E6%9E%90%E8%A7%84%E5%88%99-etc-bind-db"><span class="toc-text">具体解析规则 &#x2F;etc&#x2F;bind&#x2F;db.*</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#allow-%E8%AE%BF%E9%97%AE%E6%8E%A7%E5%88%B6%E6%8C%87%E4%BB%A4"><span class="toc-text">allow 访问控制指令</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%89%E3%80%81DNS%E6%B5%8B%E8%AF%95%E5%92%8C%E7%AE%A1%E7%90%86%E5%B7%A5%E5%85%B7"><span class="toc-text">三、DNS测试和管理工具</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#dig-%E5%91%BD%E4%BB%A4"><span class="toc-text">dig 命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#host%E5%91%BD%E4%BB%A4"><span class="toc-text">host命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nslookup%E5%91%BD%E4%BB%A4"><span class="toc-text">nslookup命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#rndc-%E5%91%BD%E4%BB%A4"><span class="toc-text">rndc 命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#whois-%E5%91%BD%E4%BB%A4"><span class="toc-text">whois 命令</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%9C%A8%E5%85%AC%E6%9C%89%E4%BA%91%E4%B8%8A%E9%85%8D%E7%BD%AEDNS%E8%A7%A3%E6%9E%90"><span class="toc-text">四、在公有云上配置DNS解析</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/role/" title="role"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="role"/></a><div class="content"><a class="title" href="/CICD/ansible/role/" title="role">role</a><time datetime="2025-08-27T10:49:36.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/playbook/" title="playbook"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="playbook"/></a><div class="content"><a class="title" href="/CICD/ansible/playbook/" title="playbook">playbook</a><time datetime="2025-08-27T10:49:30.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/module/" title="module"><img src="/img/paper4.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="module"/></a><div class="content"><a class="title" href="/CICD/ansible/module/" title="module">module</a><time datetime="2025-08-27T10:49:25.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/command/" title="command"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="command"/></a><div class="content"><a class="title" href="/CICD/ansible/command/" title="command">command</a><time datetime="2025-08-27T10:49:19.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/deploy/" title="deploy"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="deploy"/></a><div class="content"><a class="title" href="/CICD/ansible/deploy/" title="deploy">deploy</a><time datetime="2025-08-27T10:49:09.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>安全机制 | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="1 常见的安全攻击 STRIDE Spoofing 假冒，与真实网站界面相同，欺骗浏览者提交敏感信息  123456789101112131415161718192021发送邮件服务yum info postfix25端口发送邮件telnet 127.0.0.1 25内容+域名hello magedu.com指定发送人和收件人mail from:jack.ma@alibaba.comrcpt to">
+<meta property="og:type" content="article">
+<meta property="og:title" content="安全机制">
+<meta property="og:url" content="https://aquapluto.github.io/Linux/encryption-security/security-mechanisms/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="1 常见的安全攻击 STRIDE Spoofing 假冒，与真实网站界面相同，欺骗浏览者提交敏感信息  123456789101112131415161718192021发送邮件服务yum info postfix25端口发送邮件telnet 127.0.0.1 25内容+域名hello magedu.com指定发送人和收件人mail from:jack.ma@alibaba.comrcpt to">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper4.png">
+<meta property="article:published_time" content="2025-08-21T03:02:54.000Z">
+<meta property="article:modified_time" content="2025-08-28T12:33:05.214Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="加密和安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper4.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "安全机制",
+  "url": "https://aquapluto.github.io/Linux/encryption-security/security-mechanisms/",
+  "image": "https://aquapluto.github.io/img/paper4.png",
+  "datePublished": "2025-08-21T03:02:54.000Z",
+  "dateModified": "2025-08-28T12:33:05.214Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/Linux/encryption-security/security-mechanisms/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '安全机制',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper4.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">安全机制</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">安全机制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-21T03:02:54.000Z" title="发表于 2025-08-21 11:02">2025-08-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-08-28T12:33:05.214Z" title="更新于 2025-08-28 20:33">2025-08-28</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Linux/">Linux</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="1-常见的安全攻击-STRIDE"><a href="#1-常见的安全攻击-STRIDE" class="headerlink" title="1 常见的安全攻击 STRIDE"></a>1 常见的安全攻击 STRIDE</h1><ul>
+<li>Spoofing 假冒，与真实网站界面相同，欺骗浏览者提交敏感信息</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">发送邮件服务</span><br><span class="line">yum info postfix</span><br><span class="line">25端口</span><br><span class="line"></span><br><span class="line">发送邮件</span><br><span class="line">telnet 127.0.0.1 25</span><br><span class="line">内容+域名</span><br><span class="line">hello magedu.com</span><br><span class="line">指定发送人和收件人</span><br><span class="line">mail from:jack.ma@alibaba.com</span><br><span class="line">rcpt to:wang@xxx.com（有邮箱写邮箱）</span><br><span class="line">内容</span><br><span class="line">data</span><br><span class="line">subject:hello</span><br><span class="line">welcome to alibaba</span><br><span class="line">.（以.结束内容）</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">切换用户查看邮件</span><br><span class="line">su -wang</span><br><span class="line">mail</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>Tampering 篡改，修改网络中的数据包以达到某种目的</p>
+</li>
+<li><p>Repudiation 否认</p>
+</li>
+<li><p>Information Disclosure 信息泄漏</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">yum -y install telnet.server</span><br><span class="line">systemctl <span class="built_in">enable</span> --now telnet.socket</span><br><span class="line">端口号是23</span><br><span class="line"></span><br><span class="line">远程登陆</span><br><span class="line">telnet 10.0.0.8</span><br><span class="line">输用户，密码</span><br><span class="line">敲命令</span><br><span class="line">wireshark抓包 </span><br><span class="line">TCP追踪流</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>Denial of Service 拒绝服务，使计算机或网络无法提供正常的服务</p>
+</li>
+<li><p>Elevation of Privilege 提升权限，将用户权限通过非法手段提高，以到达执行敏感操作的目的</p>
+</li>
+</ul>
+<h1 id="2-加密算法和协议"><a href="#2-加密算法和协议" class="headerlink" title="2 加密算法和协议"></a>2 加密算法和协议</h1><p>对称加密</p>
+<p>非对称（公钥）加密</p>
+<p>单向加密</p>
+<p>认证协议</p>
+<h2 id="2-1-对称加密算法"><a href="#2-1-对称加密算法" class="headerlink" title="2.1 对称加密算法"></a>2.1 对称加密算法</h2><p><img src="/Linux/encryption-security/security-mechanisms/1753700463503-ec650390-6919-41fe-8655-e1bac1e81b74-17557556151431.png" alt="null"></p>
+<p>对称加密：加密和解密使用同一个密钥</p>
+<p>特性：</p>
+<ul>
+<li><p>加密、解密使用同一个密钥，效率高</p>
+</li>
+<li><p>将原始数据分割成固定大小的块，逐个进行加密</p>
+</li>
+</ul>
+<p>缺陷：</p>
+<ul>
+<li><p>密钥过多</p>
+</li>
+<li><p>密钥分发</p>
+</li>
+<li><p>数据来源无法确认</p>
+</li>
+</ul>
+<p>常见对称加密算法:</p>
+<ul>
+<li><p>DES：Data Encryption Standard，56bits</p>
+</li>
+<li><p>3DES</p>
+</li>
+<li><p>AES：Advanced (128, 192, 256bits)</p>
+</li>
+<li><p>Blowfish，Twofish</p>
+</li>
+<li><p>IDEA，RC6，CAST5</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Alice ---Bob </span><br><span class="line">对称算法 key1=key2</span><br><span class="line">data -- 加密(key1) -- data<span class="string">&#x27; ---解密（key2）---data</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="2-2-非对称加密算法"><a href="#2-2-非对称加密算法" class="headerlink" title="2.2 非对称加密算法"></a>2.2 非对称加密算法</h2><h3 id="2-2-1-非对称加密算法介绍"><a href="#2-2-1-非对称加密算法介绍" class="headerlink" title="2.2.1 非对称加密算法介绍"></a>2.2.1 非对称加密算法介绍</h3><p>非对称加密：密钥是成对出现</p>
+<ul>
+<li><p>公钥：public key，公开给所有人，主要给别人加密使用</p>
+</li>
+<li><p>私钥：secret key，private key 自己留存，必须保证其私密性，用于自已加密签名</p>
+</li>
+<li><p>特点：用公钥加密数据，只能使用与之配对的私钥解密；反之亦然</p>
+</li>
+</ul>
+<p>功能：</p>
+<ul>
+<li><p>数据加密：适合加密较小数据,比如: 加密对称密钥</p>
+</li>
+<li><p>数字签名：主要在于让接收方确认发送方身份</p>
+</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li><p>密钥长,算法复杂</p>
+</li>
+<li><p>加密解密效率低下</p>
+</li>
+</ul>
+<p>常见算法：</p>
+<ul>
+<li><p>RSA：由 RSA 公司发明，是一个支持变长密钥的公共密钥算法，需要加密的文件块的长度也是可变的,可实现加密和数字签名</p>
+</li>
+<li><p>DSA（Digital Signature Algorithm）：数字签名算法，是一种标准的 DSS（数字签名标准）</p>
+</li>
+<li><p>ECC（Elliptic Curves Cryptography）：椭圆曲线密码编码学，比RSA加密算法使用更小的密钥，提供相当的或更高等级的安全</p>
+</li>
+</ul>
+<h3 id="2-2-2-非对称加密实现加密"><a href="#2-2-2-非对称加密实现加密" class="headerlink" title="2.2.2  非对称加密实现加密"></a>2.2.2  非对称加密实现加密</h3><p><img src="/Linux/encryption-security/security-mechanisms/1753700463589-39f21729-f63d-48bd-9087-7ae9e1ff91a3-17557556151432.png" alt="null"></p>
+<p>接收者公钥加密，接收者私钥解密</p>
+<p>数据加密是为了保证信息的机密性，任何知道接收方的公钥的都可以向接收方发送信息，但是只有拥有私钥的才能解密出来</p>
+<p>接收者</p>
+<ul>
+<li><p>生成公钥&#x2F;密钥对：P和S</p>
+</li>
+<li><p>公开公钥P，保密密钥S</p>
+</li>
+</ul>
+<p>发送者</p>
+<ul>
+<li><p>使用接收者的公钥来加密消息M</p>
+</li>
+<li><p>将P(M)发送给接收者</p>
+</li>
+</ul>
+<p>接收者</p>
+<ul>
+<li>使用密钥S来解密：M&#x3D;S(P(M))</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Alice ---Bob </span><br><span class="line">非对称算法 key1&lt;&gt;key2</span><br><span class="line">data -- 加密(key1) -- data<span class="string">&#x27; ---解密（key2）---data</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Alice</span></span><br><span class="line"><span class="string">Public key 公开 Pa</span></span><br><span class="line"><span class="string">Secret private key 不公开 Sa</span></span><br><span class="line"><span class="string">Bob</span></span><br><span class="line"><span class="string">Public  key Pb</span></span><br><span class="line"><span class="string">Secret private key Sb  </span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">用任何一个密钥加密，只能用对应另一把密钥解密</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">Alice ---&gt; Bob 加密</span></span><br><span class="line"><span class="string">data -- 加密(key1=Pb) -- data&#x27;</span> ---解密（key2=Sb）---data</span><br><span class="line"></span><br><span class="line">Alice ---&gt; Bob  来源确认</span><br><span class="line">      ---&gt; jack </span><br><span class="line">data -- 加密(key1=Sa) -- data<span class="string">&#x27; ---解密（key2=Pa）---data</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-3-非对称加密实现数字签名"><a href="#2-2-3-非对称加密实现数字签名" class="headerlink" title="2.2.3 非对称加密实现数字签名"></a>2.2.3 非对称加密实现数字签名</h3><p><img src="/Linux/encryption-security/security-mechanisms/1753700463652-83ae21fe-cd0f-4ac7-a486-28ebe14042fb-17557556151433.png" alt="null"></p>
+<p>发送者私钥加密，发送者公钥加密</p>
+<p>数字签名是为了保证信息的完整性、真实性、不可否认性，任何接收方都可以用公钥解密，验证数据的正确性</p>
+<p>得到文件之后，用相同的算法获取文件摘要，再跟官方提供的摘要值对比，就能判断文件是否被篡改过</p>
+<p>发送者</p>
+<ul>
+<li><p>生成公钥&#x2F;密钥对：P和S</p>
+</li>
+<li><p>公开公钥P，保密密钥S</p>
+</li>
+<li><p>使用密钥S来加密消息M</p>
+</li>
+<li><p>发送给接收者S(M)</p>
+</li>
+</ul>
+<p>接收者</p>
+<ul>
+<li>使用发送者的公钥来解密M&#x3D;P(S(M))</li>
+</ul>
+<h3 id="2-2-4-RSA和DSA"><a href="#2-2-4-RSA和DSA" class="headerlink" title="2.2.4 RSA和DSA"></a>2.2.4 RSA和DSA</h3><p>RSA：RSA是目前最有影响力的公钥加密算法，它能够抵抗到目前为止已知的所有密码攻击，已被ISO推荐为公钥数据加密标准。RSA算法基于一个十分简单的数论事实：将两个大素数相乘十分容易，但那时想要对其乘积进行因式分解却极其困难，因此可以将乘积公开作为加密密钥</p>
+<p>DSA：DSA是基于整数有限域离散对数难题的，其安全性与RSA相比差不多。DSA只是一种算法，和RSA不同之处在于它不能用作加密和解密，也不能进行密钥交换，只用于签名,它比RSA要快很多</p>
+<h2 id="2-3-单向哈希算法"><a href="#2-3-单向哈希算法" class="headerlink" title="2.3 单向哈希算法"></a>2.3 单向哈希算法</h2><p>哈希算法：也称为散列算法，将任意数据缩小成固定大小的“指纹”，称为digest，即摘要</p>
+<p>特性：	</p>
+<ul>
+<li><p>任意长度输入，固定长度输出</p>
+</li>
+<li><p>若修改数据，指纹也会改变，且有雪崩效应，数据的一点微小改变，生成的指纹值变化非常大。</p>
+</li>
+<li><p>无法从指纹中重新生成数据，即不要逆，具有单向性</p>
+</li>
+</ul>
+<p>功能：数据完整性</p>
+<p>常见算法</p>
+<p>md5: 128bits、sha1: 160bits、sha224 、sha256、sha384、sha512</p>
+<p>常用工具</p>
+<ul>
+<li><p>md5sum | sha1sum [ –check ] file</p>
+</li>
+<li><p>openssl、gpg</p>
+</li>
+<li><p>rpm -V</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">hash</span>(data)--&gt;digest摘要,相当于指纹</span><br><span class="line">1 单向</span><br><span class="line">2 data 相同，digest必相同</span><br><span class="line">3 data不相同，digest必不相同</span><br><span class="line">4 <span class="built_in">hash</span>算法固定，则digest的长度固定</span><br><span class="line">5 data发生轻微变化，而digest会发生巨大的变化</span><br></pre></td></tr></table></figure>
+
+<p>查看文件的哈希值</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#md5 以16进制显示, 32*4=128</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">md5sum</span> /etc/hosts</span><br><span class="line">54fb6627dbaa37721048e4549db3224d  /etc/hosts</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-4-综合应用多种加密算法"><a href="#2-4-综合应用多种加密算法" class="headerlink" title="2.4 综合应用多种加密算法"></a>2.4 综合应用多种加密算法</h2><h3 id="2-4-1-实现数据加密"><a href="#2-4-1-实现数据加密" class="headerlink" title="2.4.1 实现数据加密"></a>2.4.1 实现数据加密</h3><p>对称加密和非对称加密</p>
+<p>无法验证数据完整性和来源</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">A--&gt;B</span><br><span class="line">加密：Key(data)+Pb(key)	</span><br><span class="line">解密：Sb(key)+Key(data)</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700463711-02e74d57-e30a-43c1-ac10-e5be93e63be0-17557556151434.png" alt="null"></p>
+<h3 id="2-4-2-实现数字签名"><a href="#2-4-2-实现数字签名" class="headerlink" title="2.4.2 实现数字签名"></a>2.4.2 实现数字签名</h3><p>不加密数据，可以保证数据来源的可靠性、数据的完整性和一致性</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">data+Sa(<span class="built_in">hash</span>(data))	<span class="comment">#先哈希加密数据，再用A的私钥接着加密</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700463770-25c6a50e-694e-48fb-aecf-ce325ac7fb3c-17557556151435.png" alt="null"></p>
+<h3 id="2-4-3-综合加密和签名"><a href="#2-4-3-综合加密和签名" class="headerlink" title="2.4.3  综合加密和签名"></a>2.4.3  综合加密和签名</h3><p>即实现数据加密，又可以保证数据来源的可靠性、数据的完整性和一致性</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#方法一</span></span><br><span class="line">Pb&#123;Sa[<span class="built_in">hash</span>(data)]+data&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700463830-cf6394a3-8ee3-47d6-89f7-0c94aaf31541-17557556151436.png" alt="null"></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#方法二</span></span><br><span class="line">对称key&#123;Sa[<span class="built_in">hash</span>(data)]+data&#125;+Pb(对称key)</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700463893-ebee71cf-2635-4f79-a1b0-5448ff15db5d-17557556151437.png" alt="null"></p>
+<h2 id="2-5-密码交换"><a href="#2-5-密码交换" class="headerlink" title="2.5 密码交换"></a>2.5 密码交换</h2><p>密钥交换：IKE（ Internet Key Exchange ）</p>
+<ul>
+<li><p>公钥加密：用目标的公钥加密对称密钥</p>
+</li>
+<li><p>DH (Deffie-Hellman)：生成对称（会话）密钥</p>
+</li>
+</ul>
+<p>DH 介绍</p>
+<ul>
+<li><p>这个密钥交换方法，由惠特菲尔德·迪菲（Bailey Whitfield Diffie）和马丁·赫尔曼（MartinEdward Hellman）在1976年发表</p>
+</li>
+<li><p>它是一种安全协议，让双方在完全没有对方任何预先信息的条件下通过不安全信道建立起一个密钥，这个密钥一般作为“对称加密”的密钥而被双方在后续数据传输中使用。</p>
+</li>
+<li><p>DH数学原理是base离散对数问题。做类似事情的还有非对称加密类算法，如：RSA。</p>
+</li>
+<li><p>其应用非常广泛，在SSH、VPN、Https…都有应用，勘称现代密码基石</p>
+</li>
+</ul>
+<p>DH 实现过程：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">A: g,p 协商生成公开的整数g, 大素数p</span><br><span class="line">B: g,p</span><br><span class="line">A:生成隐私数据:a (a&lt;p)，计算得出 g^a%p，发送给B</span><br><span class="line">B:生成隐私数据:b,(b&lt;p)，计算得出 g^b%p，发送给A</span><br><span class="line">A:计算得出 [(g^b%p)^a]%p = g^ab%p，生成为密钥</span><br><span class="line">B:计算得出 [(g^a%p)^b]%p = g^ab%p，生成为密钥</span><br></pre></td></tr></table></figure>
+
+<p>DH 特点</p>
+<ul>
+<li><p>泄密风险：私密数据a，b在生成K后将被丢弃，因此不存在a，b过长时间存在导致增加泄密风险。</p>
+</li>
+<li><p>中间人攻击：由于DH在传输p，g时并无身份验证，所以有机会被实施中间人攻击，替换双方传输时的数据</p>
+</li>
+</ul>
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">g=23</span><br><span class="line">p=5</span><br><span class="line"></span><br><span class="line">A:a=6</span><br><span class="line">g^a%p=23^6%5=4</span><br><span class="line"></span><br><span class="line">[(g^b%p)^a]%p=2^6%5=4</span><br><span class="line"></span><br><span class="line">B:b=15</span><br><span class="line">g^b%p=23^15%5=2</span><br><span class="line"></span><br><span class="line">[(g^a%p)^b]%p=4^15%5=4</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">echo</span> 23^15%5|bc</span><br><span class="line">2</span><br><span class="line">[root@centos8 ~]#<span class="built_in">echo</span> 23^6%5|bc</span><br><span class="line">4</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">echo</span> 2^6%5|bc</span><br><span class="line">4</span><br><span class="line">[root@centos8 ~]#<span class="built_in">echo</span> 4^15%5|bc</span><br><span class="line">4</span><br></pre></td></tr></table></figure>
+
+<h1 id="3-CA和证书"><a href="#3-CA和证书" class="headerlink" title="3 CA和证书"></a>3 CA和证书</h1><h2 id="3-1-中间人攻击"><a href="#3-1-中间人攻击" class="headerlink" title="3.1 中间人攻击"></a>3.1 中间人攻击</h2><p>中间人截获服务器向客户端发送的真正公钥，将假公钥发送给客户端，让客户端用假公钥加密数据，从而中间人可以利用自己的私钥解密</p>
+<p>并查看加密的数据，并篡改数据利用真公钥发送给服务器</p>
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700463957-5d445876-a31b-4bcb-841e-98beeb6e9318-17557556151438.png" alt="null"></p>
+<h2 id="3-2-CA和证书"><a href="#3-2-CA和证书" class="headerlink" title="3.2 CA和证书"></a>3.2 CA和证书</h2><p>CA证书代表信息的真伪，通过CA证书，可以确定客户端收到的公钥是否是真的公钥，从而防止中间人攻击，实现公钥的安全交换</p>
+<p>子CA证书由根CA证书颁发，根CA证书由自己给自己颁发</p>
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700464024-a13716a8-418d-4205-815c-2e0fdd9cd19c-17557556151439.png" alt="null"></p>
+<p><img src="/Linux/encryption-security/security-mechanisms/1753700464111-320212b1-5b96-4bd2-b3b6-4337e3f76580-175575561514310.png" alt="null"></p>
+<p>PKI：Public Key Infrastructure 公共密钥加密体系</p>
+<p>签证机构：CA（Certificate Authority）</p>
+<p>注册机构：RA</p>
+<p>证书吊销列表：CRL</p>
+<p>证书存取库：</p>
+<p>X.509：定义了证书的结构以及认证协议标准</p>
+<ul>
+<li><p>版本号</p>
+</li>
+<li><p>序列号</p>
+</li>
+<li><p>签名算法</p>
+</li>
+<li><p>颁发者</p>
+</li>
+<li><p>有效期限</p>
+</li>
+<li><p>主体名称</p>
+</li>
+</ul>
+<p>证书类型：</p>
+<ul>
+<li><p>证书授权机构的证书</p>
+</li>
+<li><p>服务器证书</p>
+</li>
+<li><p>用户证书</p>
+</li>
+</ul>
+<p>获取证书两种方法：</p>
+<ul>
+<li><p>自签名的证书： 自已签发自己的公钥</p>
+</li>
+<li><p>使用证书授权机构：生成证书请求（csr）将证书请求csr发送给CACA签名颁发证书</p>
+</li>
+</ul>
+<p><strong>自签名证书和根证书的区别</strong></p>
+<p>根证书（Root Certificate）就是自签名证书，不过签发机构不同，他有就有区别，它们之间有以下区别：</p>
+<p>自签名证书（Self-Signed Certificate）</p>
+<ul>
+<li><p>颁发者和使用者是同一个实体： 自签名证书是由实际使用该证书的实体（通常是个人、组织或设备）自行创建和签名的证书。颁发者和使用者是同一个实体，没有第三方 CA 参与。</p>
+</li>
+<li><p>信任度较低： 自签名证书在公共网络中信任度较低，因为它们没有受到受信任的第三方 CA 的验证。当客户端连接到使用自签名证书的服务时，通常会收到安全警告，用户需要手动确认是否信任该证书。</p>
+</li>
+<li><p>用途有限： 自签名证书通常用于内部测试、开发环境或局域网中，而不是在公共网络中使用。它们提供了加密通信的能力，但没有得到广泛信任。</p>
+</li>
+</ul>
+<p>根证书（Root Certificate）</p>
+<ul>
+<li><p>由受信任的 CA 颁发： 根证书是由受信任的证书颁发机构（CA）签名并颁发的证书。CA 是一个受信任的实体，它通过验证证书请求者的身份，并签发数字证书。根证书是 CA 的根证书，它本身是自签名证书。</p>
+</li>
+<li><p>信任度高： 根证书由操作系统、浏览器等软件内置，因此被广泛信任。当使用者收到由受信任 CA 签发的证书时，不会收到安全警告，因为这些证书是受信任的。</p>
+</li>
+<li><p>广泛用于公共网络： 根证书和由它签发的中间证书（Intermediate Certificate）通常用于公共网络中，例如用于加密网站的 HTTPS 通信。这些证书能够建立安全的、受信任的通信连接。</p>
+</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/Linux/encryption-security/security-mechanisms/">https://aquapluto.github.io/Linux/encryption-security/security-mechanisms/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%8A%A0%E5%AF%86%E5%92%8C%E5%AE%89%E5%85%A8/">加密和安全</a></div><div class="post-share"><div class="social-share" data-image="/img/paper4.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/Linux/encryption-security/OpenSSL/" title="OpenSSL"><img class="cover" src="/img/paper2.jpg" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenSSL</div></div><div class="info-2"><div class="info-item-1">OpenSSL是一个开放源代码的软...</div></div></div></a><a class="pagination-related" href="/Linux/firewall/nft/" title="nft"><img class="cover" src="/img/paper3.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">nft</div></div><div class="info-2"><div class="info-item-1">1 nft介绍nftables 是...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux/encryption-security/OpenSSL/" title="OpenSSL"><img class="cover" src="/img/paper2.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">OpenSSL</div></div><div class="info-2"><div class="info-item-1">OpenSSL是一个开放源代码的软...</div></div></div></a><a class="pagination-related" href="/Linux/encryption-security/sudo/" title="sudo实现授权"><img class="cover" src="/img/paper6.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">sudo实现授权</div></div><div class="info-2"><div class="info-item-1">1 sudo 介绍允许系统管理员让...</div></div></div></a><a class="pagination-related" href="/Linux/encryption-security/PAM/" title="PAM认证机制"><img class="cover" src="/img/paper3.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">PAM认证机制</div></div><div class="info-2"><div class="info-item-1">1 PAM介绍PAM：Plugga...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E5%B8%B8%E8%A7%81%E7%9A%84%E5%AE%89%E5%85%A8%E6%94%BB%E5%87%BB-STRIDE"><span class="toc-text">1 常见的安全攻击 STRIDE</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95%E5%92%8C%E5%8D%8F%E8%AE%AE"><span class="toc-text">2 加密算法和协议</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95"><span class="toc-text">2.1 对称加密算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95"><span class="toc-text">2.2 非对称加密算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-1-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95%E4%BB%8B%E7%BB%8D"><span class="toc-text">2.2.1 非对称加密算法介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-2-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E5%AE%9E%E7%8E%B0%E5%8A%A0%E5%AF%86"><span class="toc-text">2.2.2  非对称加密实现加密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-3-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E5%8A%A0%E5%AF%86%E5%AE%9E%E7%8E%B0%E6%95%B0%E5%AD%97%E7%AD%BE%E5%90%8D"><span class="toc-text">2.2.3 非对称加密实现数字签名</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-4-RSA%E5%92%8CDSA"><span class="toc-text">2.2.4 RSA和DSA</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E5%8D%95%E5%90%91%E5%93%88%E5%B8%8C%E7%AE%97%E6%B3%95"><span class="toc-text">2.3 单向哈希算法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-%E7%BB%BC%E5%90%88%E5%BA%94%E7%94%A8%E5%A4%9A%E7%A7%8D%E5%8A%A0%E5%AF%86%E7%AE%97%E6%B3%95"><span class="toc-text">2.4 综合应用多种加密算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-1-%E5%AE%9E%E7%8E%B0%E6%95%B0%E6%8D%AE%E5%8A%A0%E5%AF%86"><span class="toc-text">2.4.1 实现数据加密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-2-%E5%AE%9E%E7%8E%B0%E6%95%B0%E5%AD%97%E7%AD%BE%E5%90%8D"><span class="toc-text">2.4.2 实现数字签名</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-3-%E7%BB%BC%E5%90%88%E5%8A%A0%E5%AF%86%E5%92%8C%E7%AD%BE%E5%90%8D"><span class="toc-text">2.4.3  综合加密和签名</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5-%E5%AF%86%E7%A0%81%E4%BA%A4%E6%8D%A2"><span class="toc-text">2.5 密码交换</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-CA%E5%92%8C%E8%AF%81%E4%B9%A6"><span class="toc-text">3 CA和证书</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E4%B8%AD%E9%97%B4%E4%BA%BA%E6%94%BB%E5%87%BB"><span class="toc-text">3.1 中间人攻击</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-CA%E5%92%8C%E8%AF%81%E4%B9%A6"><span class="toc-text">3.2 CA和证书</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/role/" title="role"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="role"/></a><div class="content"><a class="title" href="/CICD/ansible/role/" title="role">role</a><time datetime="2025-08-27T10:49:36.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/playbook/" title="playbook"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="playbook"/></a><div class="content"><a class="title" href="/CICD/ansible/playbook/" title="playbook">playbook</a><time datetime="2025-08-27T10:49:30.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/module/" title="module"><img src="/img/paper4.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="module"/></a><div class="content"><a class="title" href="/CICD/ansible/module/" title="module">module</a><time datetime="2025-08-27T10:49:25.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/command/" title="command"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="command"/></a><div class="content"><a class="title" href="/CICD/ansible/command/" title="command">command</a><time datetime="2025-08-27T10:49:19.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/deploy/" title="deploy"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="deploy"/></a><div class="content"><a class="title" href="/CICD/ansible/deploy/" title="deploy">deploy</a><time datetime="2025-08-27T10:49:09.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

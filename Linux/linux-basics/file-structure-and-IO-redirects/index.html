@@ -1,0 +1,641 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>文件结构和IO重定向 | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="1 文件系统目录结构  文件和目录被组织成一个单根倒置树结构  文件系统从根目录下开始，用“&#x2F;”表示  根文件系统(rootfs)：root filesystem  标准Linux文件系统（如：ext4），文件名称大小写敏感，例如：MAIL, Mail, mail, mAiL以 . 开头的文件为隐藏文件  路径分隔的 &#x2F;  文件名最长255个字节  包括路径在内文件名称最长40">
+<meta property="og:type" content="article">
+<meta property="og:title" content="文件结构和IO重定向">
+<meta property="og:url" content="https://aquapluto.github.io/Linux/linux-basics/file-structure-and-IO-redirects/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="1 文件系统目录结构  文件和目录被组织成一个单根倒置树结构  文件系统从根目录下开始，用“&#x2F;”表示  根文件系统(rootfs)：root filesystem  标准Linux文件系统（如：ext4），文件名称大小写敏感，例如：MAIL, Mail, mail, mAiL以 . 开头的文件为隐藏文件  路径分隔的 &#x2F;  文件名最长255个字节  包括路径在内文件名称最长40">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper4.png">
+<meta property="article:published_time" content="2025-08-19T05:52:56.000Z">
+<meta property="article:modified_time" content="2025-08-28T12:33:05.246Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="linux基础">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper4.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "文件结构和IO重定向",
+  "url": "https://aquapluto.github.io/Linux/linux-basics/file-structure-and-IO-redirects/",
+  "image": "https://aquapluto.github.io/img/paper4.png",
+  "datePublished": "2025-08-19T05:52:56.000Z",
+  "dateModified": "2025-08-28T12:33:05.246Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/Linux/linux-basics/file-structure-and-IO-redirects/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '文件结构和IO重定向',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper4.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">文件结构和IO重定向</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机网络</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-layer/"><span>网络层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/transport-layer/"><span>传输层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/application-layer/"><span>应用层</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/computer-basics/network/network-architecture/"><span>物理网络架构全链路</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/linux-basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>软件包管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/introduce/"><span>软件包介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Centos/"><span>Centos软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/Ubuntu/"><span>Ubuntu软件管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/software-manage/source-code-compilation/"><span>源码编译安装</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/performance-analysis/"><span>性能分析命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-command/"><span>磁盘管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration-command/"><span>网络配置命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/file-share/"><span>文件共享服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/MySQL/SQL%E8%AF%AD%E5%8F%A5/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Redis/Redis%E5%AE%89%E8%A3%85/"><span>Redis安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kafka/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>网络模式</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/docker/"><span>docker compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>构建镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>docker build构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/mirror/"><span>分布式镜像仓库Harbor</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>监控容器真实的cpu使用率</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/container/process/"><span>不可中断睡眠对容器的影响</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/container/containerd/"><span>containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Kubernetes</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/conspect/"><span>概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/deploy/"><span>部署安装</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/pod/"><span>Pod</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/controller/"><span>控制器</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/service-loadbalancer/"><span>服务发现与负载均衡</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/data-storage/"><span>数据存储持久化</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/certification-authentication/"><span>认证与鉴权体系</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/network/"><span>网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/helm/"><span>Helm</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/kubernetes/monitor/"><span>监控</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/introduce/"><span>概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/query-results-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/prometheus/indicators-re-marked/"><span>指标重新打标</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Grafana</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/deploy/"><span>部署安装</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/data-source/"><span>配置数据源</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/monitor/grafana/charts/"><span>自定义图表</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/role/"><span>Role角色</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">文件结构和IO重定向</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-19T05:52:56.000Z" title="发表于 2025-08-19 13:52">2025-08-19</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-08-28T12:33:05.246Z" title="更新于 2025-08-28 20:33">2025-08-28</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Linux/">Linux</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">5.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>21分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="1-文件系统目录结构"><a href="#1-文件系统目录结构" class="headerlink" title="1 文件系统目录结构"></a>1 文件系统目录结构</h1><p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657258-870b6644-bbb6-410c-842b-585df75488d5.png" alt="null"></p>
+<ul>
+<li><p>文件和目录被组织成一个单根倒置树结构</p>
+</li>
+<li><p>文件系统从根目录下开始，用“&#x2F;”表示</p>
+</li>
+<li><p>根文件系统(rootfs)：root filesystem</p>
+</li>
+<li><p>标准Linux文件系统（如：ext4），文件名称大小写敏感，例如：MAIL, Mail, mail, mAiL以 . 开头的文件为隐藏文件</p>
+</li>
+<li><p>路径分隔的 &#x2F;</p>
+</li>
+<li><p>文件名最长255个字节</p>
+</li>
+<li><p>包括路径在内文件名称最长4095个字节</p>
+</li>
+<li><p>蓝色–&gt;目录 绿色–&gt;可执行文件 红色–&gt;压缩文件 浅蓝色–&gt;链接文件 灰色–&gt;其他文件</p>
+</li>
+<li><p>除了斜杠和NUL,所有字符都有效.但使用特殊字符的目录名和文件不推荐使用，有些字符需要用引号来引用</p>
+</li>
+<li><p>每个文件都有两类相关数据：元数据：metadata，即属性， 数据：data，即文件内容</p>
+</li>
+</ul>
+<p>Linux的文件系统分层结构：FHS Filesystem Hierarchy Standard</p>
+<p>参考文档： <a target="_blank" rel="noopener" href="http://www.pathname.com/fhs/">http://www.pathname.com/fhs/</a></p>
+<h2 id="1-1-各个目录功能"><a href="#1-1-各个目录功能" class="headerlink" title="1.1 各个目录功能"></a>1.1 各个目录功能</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#命令相关目录</span></span><br><span class="line">● /usr/bin：普通用户使用命令</span><br><span class="line">● /usr/sbin：root用户使用命令</span><br><span class="line"><span class="comment">#启动目录</span></span><br><span class="line">● /boot：存放的启动相关文件，例如kernel，grub（引导装载程序）</span><br><span class="line"><span class="comment">#系统文件目录</span></span><br><span class="line">● /usr/lib或/usr/lib64：库文件Glibc</span><br><span class="line"><span class="comment">#用户家目录</span></span><br><span class="line">● /home：普通用户</span><br><span class="line">● /root：root用户</span><br><span class="line"><span class="comment">#配置文件目录</span></span><br><span class="line">● /etc/sysconfig/network-script/：网络配置文件目录，rocky9有变动为/etc/NetworkManger/system-connections</span><br><span class="line">● /etc/hostname：系统主机名配置文件</span><br><span class="line">● /etc/resolv.conf：dns客户端配置文件</span><br><span class="line">● /etc/hosts：本地域名解析配置文件</span><br><span class="line">● /etc/fstab：系统挂载目录，开机自启动挂载列表</span><br><span class="line">● /etc/passwd：系统用户文件</span><br><span class="line"><span class="comment">#设备目录文件</span></span><br><span class="line">● /dev/cdrom和/dev/sr0：系统光盘镜像设备</span><br><span class="line">● /dev/null：黑洞设备，只进不出，类似于垃圾回收站</span><br><span class="line">● /dev/random：生成随机数的设备</span><br><span class="line">● /dev/zero：能源源不断的产生数据</span><br><span class="line">● /dev/pts/0：虚拟的Bash Shell终端，提供给远程客户用，0代表第一个终端</span><br><span class="line">● /dev/stderr：错误输出</span><br><span class="line">● /dev/stdin：标准输入</span><br><span class="line">● /dev/stdout：标准输出</span><br><span class="line"><span class="comment">#可变目录，存放一些变化文件，比如数据库，日志，邮件等</span></span><br><span class="line">● mysql：/var/lib/mysql</span><br><span class="line">● vsftpd：/var/ftp</span><br><span class="line">● mail：/var/spool/mail</span><br><span class="line">● cron：/var/spool/cron</span><br><span class="line">● <span class="built_in">log</span>：/var/log/messages系统日志；/var/log/secure系统登陆日志</span><br><span class="line">● tmp：/var/tmp程序产生的临时文件</span><br><span class="line"><span class="comment">#虚拟文件系统，反应出来的是内核，进程信息或实时状态，类似于汽车的仪表盘</span></span><br><span class="line">● /proc/meminfo：内存信息</span><br><span class="line">● /proc/cpuinfo：cpu信息</span><br><span class="line"><span class="comment">#存储设备挂载目录</span></span><br><span class="line">● /media：移动设备默认挂载点</span><br><span class="line">● /mnt：手工挂载设备挂载点</span><br><span class="line">● /opt：早期第三方厂商的软件存放目录</span><br><span class="line">● /tmp：临时存放文件目录</span><br><span class="line"><span class="comment">#centos7特有目录</span></span><br><span class="line">● /lost+found：使用ext2/ext3才有，存储发生意外后丢失的文件，只有root用户可以打开</span><br><span class="line">● /lost+found/run：存放程序运行后产生的pid文件</span><br><span class="line">● /lost+found/srv：物理设备产生的文件</span><br><span class="line">● /lost+found/sys：硬件设备的驱动程序信息</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657360-f2937157-ee91-4f01-bb90-ed9ed17e4548.png" alt="null"></p>
+<h2 id="1-2-Linux下的文件类型"><a href="#1-2-Linux下的文件类型" class="headerlink" title="1.2 Linux下的文件类型"></a>1.2 Linux下的文件类型</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- 普通文件</span><br><span class="line">d 目录文件directory</span><br><span class="line">l 符号链接文件<span class="built_in">link</span></span><br><span class="line">b 块设备block</span><br><span class="line">c 字符设备character</span><br><span class="line">p 管道文件pipe</span><br><span class="line">s 套接字文件socket</span><br></pre></td></tr></table></figure>
+
+<p><strong>linux 系统中的文件类型颜色标识</strong></p>
+<p>linux 系统中，每种颜色，都有对应的含义，可以根据文件在终端中显示的颜色，来判断是什么类型的文件</p>
+<p>颜色与文件类型对应关系，由配置文件定义，可更改（此处的文件类型，可以理解为文件格式）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">vim /etc/DIR_COLORS</span><br><span class="line"></span><br><span class="line">普通文件         <span class="comment">#白色          </span></span><br><span class="line">目录文件         <span class="comment">#蓝色    </span></span><br><span class="line">符号链接文件     <span class="comment">#浅蓝色    </span></span><br><span class="line">块设备           <span class="comment">#黄色         </span></span><br><span class="line">字符设备         <span class="comment">#黄色</span></span><br><span class="line">管道文件         <span class="comment">#青黄</span></span><br><span class="line">套接字文件       <span class="comment">#粉红</span></span><br><span class="line">图片文件         <span class="comment">#粉红</span></span><br><span class="line">压缩文件或文件包  <span class="comment">#红色</span></span><br><span class="line">其他文件         <span class="comment">#灰色</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>管道文件</strong></p>
+<p>所谓管道，是指用于连接一个读进程和一个写进程，以实现它们之间通信的共享文件，又称 pipe 文件。</p>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657507-02d3720e-837e-4b42-b5e6-b1a42c7a2a9e.png" alt="null"></p>
+<p><strong>套接字文件</strong></p>
+<p>Socket本身有“插座”的意思，在Unix&#x2F;Linux环境下，用于表示进程间网络通信的特殊文件类型。本质为内核借助缓冲区形成的伪文件。</p>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657709-61f3044d-30df-41f1-801b-fe20cbde8950.png" alt="null"></p>
+<h1 id="2-文件系统和inode表"><a href="#2-文件系统和inode表" class="headerlink" title="2 文件系统和inode表"></a>2 文件系统和inode表</h1><p> 在Linux系统中，一切皆文件，每个文件，又分为文件元数据和具体内容两部份，一个文件元数据和其具体内容数据，在磁盘分区上，是分开存放的。</p>
+<p>这种存储文件元数据的区域就叫 inode，中文译作 “索引节点”，每个文件都有一个inode和n(n&gt;&#x3D;1)个block 数据块，inode 存储文件元数据，数据块存储文件具体内容数据</p>
+<p>磁盘在格式化时，系统会自动将磁盘分为两个区域，一个是 inode 区（inode table），用来存放文件的 inode，另一个是数据区，分成很多个block(块)，用来存放文件的具体内容数据</p>
+<h2 id="2-1-文件系统"><a href="#2-1-文件系统" class="headerlink" title="2.1 文件系统"></a>2.1 文件系统</h2><p>文件系统：操作系统内核中用来控制硬盘的一种程序</p>
+<p>每个硬盘分区都要有一个文件系统</p>
+<ul>
+<li><p>硬盘分区—-》打隔断，分割出一个个小空间</p>
+<ul>
+<li>硬盘的最小存取单位-》扇区（512字节，相当于0.5KB）</li>
+</ul>
+</li>
+<li><p>文件系统—-》对一个个小空间做装修，负责把空间的数据组织好</p>
+<ul>
+<li>操作系统的最小存取单位-》block块（4KB，8个扇区）</li>
+</ul>
+</li>
+</ul>
+<p>操作系统读取硬盘的时候，不会一个扇区一个扇区地读取，这样效率太低，于是操作系统中的文件系统负责将磁盘的多扇区组织成一个个的block块，这样操作系统就可以一次性读取一个”块”（block），即一次性连续读取多个扇区，所以文件系统组织好了之后带来的方便之处</p>
+<ul>
+<li>使用者—–》block块（文件系统）—–》n个扇区（硬盘的读写单位）</li>
+</ul>
+<p>一个文件系统包含的三大类块</p>
+<ul>
+<li><p>inode block块：存放文件的元数据</p>
+<ul>
+<li><code>ls -l</code> 的结果如权限、属主、数组</li>
+<li>对一个文件来说，inode block就1个</li>
+</ul>
+</li>
+<li><p>data block块：存放文件的内容数据</p>
+<ul>
+<li>cat看到的结果，真正的内容</li>
+<li>对一个文件来说，如果过大，data block可能有多个</li>
+</ul>
+</li>
+<li><p>superblock超级块：记录此filesystem的整体信息，包括inode&#x2F;block的总量、使用量、剩余量，以及文件系统的格式与相关信息等；</p>
+<ul>
+<li>superblock一个文件系统整体就一个</li>
+</ul>
+</li>
+</ul>
+<p>硬盘满了，分两种情况</p>
+<ul>
+<li><p>inode号耗尽</p>
+</li>
+<li><p>磁盘空间耗尽</p>
+</li>
+</ul>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657857-c57ebdd5-fbd1-4dc2-bb1d-fff9f95d5a6b.png" alt="null"></p>
+<p>如上图，每一个inode表记录对应的保存了以下信息：</p>
+<ul>
+<li><p>inode number 节点号</p>
+</li>
+<li><p>文件类型</p>
+</li>
+<li><p>权限</p>
+</li>
+<li><p>UID</p>
+</li>
+<li><p>GID</p>
+</li>
+<li><p>链接数（指向这个文件名路径名称个数）</p>
+</li>
+<li><p>该文件的大小和不同的时间戳</p>
+</li>
+<li><p>指向磁盘上文件的数据块指针</p>
+</li>
+<li><p>有关文件的其他数据</p>
+</li>
+</ul>
+<p>总结</p>
+<ul>
+<li><p>磁盘在格式化时，系统会自动将磁盘分为两个区域，一个是 inode 区（inode table），用来存放文件的 inode，另一个是数据区，分成很多个block(块)，用来存放文件的具体内容数据</p>
+</li>
+<li><p>一个磁盘分区上有多少个inode和多少个block，由系统自行决定，跟文件系统，磁盘分区大小，数据块大小有关</p>
+</li>
+<li><p>一个磁盘分区，能存放多少个文件，由文件大小，磁盘分区大小，inode数量决定</p>
+</li>
+</ul>
+<h2 id="2-2-查找文件内容的底层流程"><a href="#2-2-查找文件内容的底层流程" class="headerlink" title="2.2 查找文件内容的底层流程"></a>2.2 查找文件内容的底层流程</h2><p>打开一个文件以后，系统就以inode号码来识别这个文件，不再考虑文件名。因此，通常来说，系统无法从inode号码得知文件名</p>
+<p>文件夹也是文件：</p>
+<ul>
+<li>元数据：权限、属主、属组——》inode block块</li>
+<li>内容数据：存的该文件夹包含的——–》data block块<ul>
+<li>子文件名—–》inode块的编号</li>
+<li>子文件夹名—–》inode块的编号</li>
+</ul>
+</li>
+</ul>
+<p>普通文件：</p>
+<ul>
+<li><p>元数据：权限、属主、属组——–》inode block块</p>
+</li>
+<li><p>内容数据：你写的文件中的数据——–》data block块</p>
+</li>
+</ul>
+<p>如图，比如查看&#x2F;etc&#x2F;passwd：<code>/ ---&gt; etc ---&gt; passwd</code></p>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657917-7b309220-cc1c-47a5-b209-f80ccd1e67c4.png" alt="null"></p>
+<h2 id="2-3-创建、修改、删除文件对于inode号的影响"><a href="#2-3-创建、修改、删除文件对于inode号的影响" class="headerlink" title="2.3 创建、修改、删除文件对于inode号的影响"></a>2.3 创建、修改、删除文件对于inode号的影响</h2><p>创建和复制文件，会占用inode号</p>
+<p>移动文件，目标和源在相同的文件系统，不影响inode号码；在不同的文件系统，相当于cp和rm</p>
+<p>重命名文件，只是改变文件名，不影响inode号</p>
+<p>删除文件，释放的inode号可以被重用，数据实际上不会马上被删除，当另一个文件使用数据块时将被覆盖</p>
+<p>当每次修改完服务器配置文件后，为什么都需要重新加载一下配置文件呢？因为vim每次修改完后，Inode号都会变，系统还是读取的原来inode号的配置文件，每次修改完服务器的配置文件，都要重启服务，重新读一下配置文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#分区越大，可用的节点编号就越多，当前分区有多少个节点编号，就是说能在当前分区上创建多少个文件</span></span><br><span class="line"><span class="comment">#如果当前分区上的节点编号用光，则无法再创建新文件，系统会提示 “No space left on device”</span></span><br><span class="line"><span class="comment">#如果当前分区上的空间用光，同样无法创建新文件，系统同样提示 “No space left on device”</span></span><br><span class="line"></span><br><span class="line">磁盘分区还有空间，但提示没有足够空间创建文件，这就是因为 inode 编号耗尽的原因</span><br><span class="line">inode 编号资源还有，但磁盘数据空间被耗尽，同样无法创建文件</span><br></pre></td></tr></table></figure>
+
+<h1 id="3-硬链接和软链接"><a href="#3-硬链接和软链接" class="headerlink" title="3 硬链接和软链接"></a>3 硬链接和软链接</h1><h2 id="3-1-硬链接"><a href="#3-1-硬链接" class="headerlink" title="3.1 硬链接"></a>3.1 硬链接</h2><p>硬链接：指向文件系统中某个文件的实际物理位置的直接链接。在Linux中，文件实际上是存储在磁盘上的数据块（或inode）的引用。硬链接就是这些数据块的另一个名称或引用。创建硬链接相当于给文件增加了一个新的名字</p>
+<ul>
+<li><p>目标文件与源文件指向同一个inode号</p>
+</li>
+<li><p>改动一个文件元数据或内容，另外一个也跟着变</p>
+</li>
+<li><p>删除源文件，仅仅只是解除了源文件名与inode号的关联关系，所以不会影响目标文件</p>
+</li>
+<li><p>硬链接无法跨分区</p>
+</li>
+<li><p>不能对目录做硬链接</p>
+</li>
+</ul>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073657986-77e47b25-4794-40c0-8203-6ab5796c08d6.png" alt="null"></p>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073658047-d71d1d6a-73bf-43dc-b4ec-872729ae0768.png" alt="null"></p>
+<p>使用场景</p>
+<ul>
+<li><p>备份**：<strong>硬链接常用于备份，因为它们不占用</strong>额外**的磁盘空间（不需要额外存储数据和inode结构，但是需要存储目录项）。</p>
+</li>
+<li><p>文件重命名或移动**：**在重命名或移动文件时，硬链接可以保持文件的一致性。</p>
+</li>
+<li><p>多人共享**：**当多人需要对同一个文件进行操作的时候，如果每次都是直接操作原始文件，一旦有一个人执行了误删除，则该文件将立即永久消失。但如果每个人都在私人目录中创建一个该文件的硬链接，即使有一个人误删了他自己的文件，也不会导致原始文件被删除，大幅降低文件意外丢失的概率</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> filename [linkname ]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 给a.txt起了aa.txt的别名</span></span><br><span class="line"><span class="built_in">ln</span> a.txt aa.txt</span><br></pre></td></tr></table></figure>
+
+<h2 id="3-2-软链接"><a href="#3-2-软链接" class="headerlink" title="3.2 软链接"></a>3.2 软链接</h2><p>软连接：类似于 Windows 中的快捷方式，包含的是另一个文件路径名的文本指针。当访问软链接时，系统会读取软链接文件中存储的路径信息，然后根据这个路径找到并访问目标文件。如果目标文件被移动或删除，软链接将失效，因为它存储的路径不再指向一个有效的文件</p>
+<ul>
+<li><p>目标文件指向的是源文件的文件名，包含的不是文件的实际数据，具有不同的inode号</p>
+</li>
+<li><p>改动一个文件内容，另外一个也跟着变，但改元数据的话，彼此之间不会互相影响</p>
+</li>
+<li><p>删除源文件，目标文件不可用</p>
+</li>
+<li><p>软连接可以跨分区，跨文件系统，因为是指向文件名</p>
+</li>
+<li><p>可以对目录做软链接</p>
+</li>
+</ul>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073658133-38638fc1-ddef-4b30-acc3-a46b86b58032.png" alt="null"></p>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073658215-0039f4b5-a1d9-43b6-a00b-f18ac4fa11a7.png" alt="null"></p>
+<p>注意问题</p>
+<ul>
+<li><p>软链接路径：使用相对路径时，源文件路径（第一个参数）是相对于软链接文件所在目录的，软链接路径（第二个参数）是相对于当前工作目录的，即它们都相对于同一个当前目录，不可以是不同的目录</p>
+</li>
+<li><p>权限问题：软链接的权限总是lrwxrwxrwx，但实际访问权限取决于源文件。</p>
+</li>
+<li><p>备份和恢复**：**在备份和恢复时，软链接可能需要特别处理，以保持其指向正确的位置。</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">ln</span> -s 源文件路径 软链接路径</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]#<span class="built_in">ln</span> -s /etc/issue /boot/issue.link </span><br><span class="line"></span><br><span class="line">/boot/issue.link这个符号链接指向/etc/issue文件</span><br><span class="line">访问/boot/issue.link相当于访问/etc/issue</span><br></pre></td></tr></table></figure>
+
+<p>范例：删除软链接文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">rm</span> -rf /boot/issue.link 	<span class="comment"># 只删除软链接本身（链接文件），不会删除源目录内容</span></span><br><span class="line"><span class="built_in">rm</span> -rf /boot/issue.link/ 	<span class="comment"># 删除源目录内容（链接指向的目录），但不会删除链接文件。此方法非常危险</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 注意: 删除此软链接务必不要加-r选项</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="4-IO重定向和管道"><a href="#4-IO重定向和管道" class="headerlink" title="4 IO重定向和管道"></a>4 IO重定向和管道</h1><h2 id="4-1-文件描述符"><a href="#4-1-文件描述符" class="headerlink" title="4.1 文件描述符"></a>4.1 文件描述符</h2><p>文件描述符的概念：进程但凡打开一个文件，操作性系统都会为打开的文件分配一个编号（&gt;&#x3D;0的证书），这个编号就称之为文件描述符（也称之为文件句柄）</p>
+<p>Linux给程序提供三种 I&#x2F;O 设备</p>
+<ul>
+<li><p>标准输入（STDIN） 0文件描述符：代表标准输入</p>
+</li>
+<li><p>标准输出（STDOUT） 1文件描述符：代表标准正确输出</p>
+</li>
+<li><p>标准错误（STDERR） 2文件描述符：代表标准错误输出</p>
+</li>
+</ul>
+<p>在Linux系统中，一切皆文件，所以，这三个设备也是以文件的形式存在于系统中；程序从标准输入文件中获取数据，再将运行结果和错误信息输出到标准输出设备和标准错误输出设备</p>
+<ul>
+<li><p>一个进程运行起来之后，我们要用它的时候无非就是与之交互，交互&#x3D;输入+输出</p>
+</li>
+<li><p>整体的关系：进程(打开文件)———–》文件描述符——-》操作系统内核——–》硬盘</p>
+</li>
+</ul>
+<p>输入输出背后对应的机制是什么？在linux系统中很简单，一切皆文件，所以对于进程来讲</p>
+<ul>
+<li><p>输入操作—-》某个打开的文件—》某个文件描述符</p>
+</li>
+<li><p>输出操作—-》某个打开的文件—》某个文件描述符</p>
+</li>
+</ul>
+<p><img src="/Linux/linux-basics/file-structure-and-IO-redirects/1755073658281-20a6cf60-5ada-4e12-96dc-00a52d27ea44.png" alt="null"></p>
+<p>$$：当前运行的 shell 进程的进程 ID（PID）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#ll /proc/$$/fd</span><br><span class="line">total 0</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:21 0 -&gt; /dev/pts/2</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:21 1 -&gt; /dev/pts/2</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:21 2 -&gt; /dev/pts/2</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:23 255 -&gt; /dev/pts/2</span><br></pre></td></tr></table></figure>
+
+<p>范例：假设我们打开了另外一个窗口，用 <code>tail -f</code> 命令打开了一个文件（还处于打开状态），如果我们想看到这个文件描述符，就去之前的窗口输入<code>ll /proc/</code>pidof tail<code>/fd</code>，数字是随机分的，但是012是固定的</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">tail</span> -f anaconda-ks.cfg </span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#ll /proc/`pidof <span class="built_in">tail</span>`/fd   <span class="comment">#文件处于打开状态</span></span><br><span class="line">total 0</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:28 0 -&gt; /dev/pts/3</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:28 1 -&gt; /dev/pts/3</span><br><span class="line">lrwx------ 1 root root 64 Oct 23 16:28 2 -&gt; /dev/pts/3</span><br><span class="line">lr-x------ 1 root root 64 Oct 23 16:28 3 -&gt; /root/anaconda-ks.cfg</span><br><span class="line">lr-x------ 1 root root 64 Oct 23 16:28 4 -&gt; anon_inode:inotify</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#ll /proc/`pidof <span class="built_in">tail</span>`/fd   <span class="comment">#文件关闭</span></span><br><span class="line"><span class="built_in">ls</span>: cannot access /proc//fd: No such file or directory</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-2-I-O重定向-redirect"><a href="#4-2-I-O重定向-redirect" class="headerlink" title="4.2 I&#x2F;O重定向 redirect"></a>4.2 I&#x2F;O重定向 redirect</h2><h3 id="4-2-1-标准输出和错误重定向"><a href="#4-2-1-标准输出和错误重定向" class="headerlink" title="4.2.1 标准输出和错误重定向"></a>4.2.1 标准输出和错误重定向</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">命令 操作符号 文件名</span><br><span class="line">-：表示标准输出或者标准输入</span><br></pre></td></tr></table></figure>
+
+<p>支持的操作符号</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">1&gt; 或 &gt;  <span class="comment">#把STDOUT重定向到文件</span></span><br><span class="line">2&gt;       <span class="comment">#把STDERR重定向到文件</span></span><br><span class="line">&amp;&gt;       <span class="comment">#把标准输出和错误都重定向</span></span><br><span class="line">&gt;&amp;       <span class="comment">#和上面功能一样，建议使用上面方式</span></span><br><span class="line">注意：以上如果文件已存在，文件内容会被覆盖</span><br></pre></td></tr></table></figure>
+
+<p>追加</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;  <span class="comment">#追加标准输出重定向至文件</span></span><br><span class="line">2&gt;&gt; <span class="comment">#追加标准错误重定向至文件</span></span><br></pre></td></tr></table></figure>
+
+<p>标准输出和错误输出各自定向至不同位置</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">COMMAND &gt; /path/to/file.out 2&gt; /path/to/error.out</span><br></pre></td></tr></table></figure>
+
+<p>合并标准输出和错误输出为同一个数据流进行重定向</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&amp;&gt;  覆盖重定向</span><br><span class="line">&amp;&gt;&gt; 追加重定向</span><br><span class="line"></span><br><span class="line">COMMAND &gt; /path/to/file.out 2&gt;&amp;1 （顺序很重要）</span><br><span class="line">COMMAND &gt;&gt; /path/to/file.out 2&gt;&amp;1</span><br></pre></td></tr></table></figure>
+
+<p>范例：标准输出至其它终端</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">tty</span></span><br><span class="line">/dev/pts/2</span><br><span class="line">[root@centos7 ~]#<span class="built_in">ls</span> &gt; /dev/pts/3</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#<span class="built_in">tty</span></span><br><span class="line">/dev/pts/3</span><br><span class="line">[root@centos7 ~]#anaconda-ks.cfg</span><br></pre></td></tr></table></figure>
+
+<p>范例：命令输出重定向</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#hostname &gt; /root/data/data.txt</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> /root/data/data.txt</span><br><span class="line">centos7</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#<span class="built_in">uname</span> -r &gt; /root/data/data.txt   <span class="comment">#会覆盖之前的内容</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> /root/data/data.txt      </span><br><span class="line">3.10.0-1160.el7.x86_64</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#hostname &gt; /root/data/data.txt</span><br><span class="line">[root@centos7 ~]#<span class="built_in">uname</span> -r &gt;&gt; /root/data/data.txt  <span class="comment">#追加不会覆盖</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> /root/data/data.txt</span><br><span class="line">centos7</span><br><span class="line">3.10.0-1160.el7.x86_64</span><br></pre></td></tr></table></figure>
+
+<p>范例：合并多个命令的结果至一个文件中</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#&#123; hostname;<span class="built_in">uname</span> -r;&#125; &gt; /root/data/data.log</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> /root/data/data.log</span><br><span class="line">centos7</span><br><span class="line">3.10.0-1160.el7.x86_64</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#( hostname -I;<span class="built_in">uname</span> -r ) &gt; /root/data/data.log</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> /root/data/data.log</span><br><span class="line">10.0.0.183 </span><br><span class="line">3.10.0-1160.el7.x86_64</span><br></pre></td></tr></table></figure>
+
+<p>范例：标准输出和标准错误分别放到一个文件里</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">ls</span> data/ /xxx &gt; stdout.log 2&gt; stderr.log</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> stdout.log </span><br><span class="line">data/:</span><br><span class="line">scripts</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> stderr.log </span><br><span class="line"><span class="built_in">ls</span>: cannot access /xxx: No such file or directory</span><br></pre></td></tr></table></figure>
+
+<p>范例：标准输出和标准错误都放到一个文件里</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#第一种</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">ls</span> anaconda-ks.cfg xxx &amp;&gt;g.txt</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> g.txt </span><br><span class="line"><span class="built_in">ls</span>: cannot access xxx: No such file or directory</span><br><span class="line">anaconda-ks.cfg</span><br><span class="line"></span><br><span class="line"><span class="comment">#第二种</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">ls</span> anaconda-ks.cfg xxx &gt;f.txt 2&gt;&amp;1</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> f.txt </span><br><span class="line"><span class="built_in">ls</span>: cannot access xxx: No such file or directory</span><br><span class="line">anaconda-ks.cfg</span><br><span class="line"></span><br><span class="line"><span class="comment">#第三种</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">ls</span> anaconda-ks.cfg xxx 2&gt;t.txt 1&gt;&amp;2</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> t.txt </span><br><span class="line"><span class="built_in">ls</span>: cannot access xxx: No such file or directory</span><br><span class="line">anaconda-ks.cfg</span><br><span class="line"></span><br><span class="line"><span class="comment">#错误写法</span></span><br><span class="line"><span class="comment">#标准错误输出重定向至标准输出之前，要先定义好标准输出的文件</span></span><br><span class="line">[root@ubuntu2204 ~]# <span class="built_in">ls</span> fstab null 2&gt;&amp;1 &gt; out.log</span><br><span class="line"></span><br><span class="line"><span class="comment">#标准输出重定向至标准错误输出之前，要先定义好标准错误输出的文件</span></span><br><span class="line">[root@ubuntu2204 ~]# <span class="built_in">ls</span> fstab null 1&gt;&amp;2 2&gt;out.log</span><br></pre></td></tr></table></figure>
+
+<p>范例: 实现标准输出和错误的互换</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#子进程中借用中间文件描述符3，将标准输出和标准错误输出作了对换</span></span><br><span class="line">[root@centos8 ~]#( <span class="built_in">cat</span> /etc/centos-release /etc/xxx 3&gt;&amp;1 1&gt;&amp;2 2&gt;&amp;3 ) &gt; f1.txt 2&gt; f2.txt</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> f1.txt</span><br><span class="line"><span class="built_in">cat</span>: /etc/xxx: No such file or directory</span><br><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> f2.txt</span><br><span class="line">CentOS Linux release 8.2.2004 (Core)</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-2-标准输入重定向"><a href="#4-2-2-标准输入重定向" class="headerlink" title="4.2.2 标准输入重定向"></a>4.2.2 标准输入重定向</h3><p>从文件中导入STDIN，代替当前终端的输入设备，使用 &lt; 来重定向标准输入</p>
+<p>某些命令能够接受从文件中导入的STDIN</p>
+<p>标准输入重定向是使用文件来代替键盘的输入，从文件中读取数据，代替当前终端的输入设备输入的数据</p>
+<p>怎么判断命令能使用标准输入重定向？不跟任何选项参数，直接回车，看是否等待标准输入，如果是，则该命令可以使用标准输入重定向。</p>
+<p>实现标准输入重定向的符号 COMMAND &lt; FILE</p>
+<p><strong>bc 命令</strong>：可以避免在键盘屏幕上输入内容做计算</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">echo</span> 2*3 &gt; data.txt   <span class="comment"># data.txt存放echo 2*3的标准输出</span></span><br><span class="line">[root@centos7 ~]#bc &lt; data.txt         <span class="comment"># data.txt作为bc的标准输入</span></span><br><span class="line">6</span><br><span class="line"></span><br><span class="line">[root@centos7 ~]#<span class="built_in">seq</span> -s+ 10 &gt; seq.log   <span class="comment"># seq.log存放seq -s+ 10的标准输出</span></span><br><span class="line">[root@centos7 ~]#bc &lt; seq.log           <span class="comment"># seq.log作为bc的标准输入</span></span><br><span class="line">55</span><br><span class="line"></span><br><span class="line">注意：data.txt和seq.log只是临时文件，要是不想是临时文件，需要和管道符应用</span><br></pre></td></tr></table></figure>
+
+<p><strong>cat命令</strong></p>
+<p>一行一行重定向 </p>
+<ul>
+<li>cat &gt; file</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> &gt; a.log</span><br><span class="line">a</span><br><span class="line">b</span><br><span class="line">c</span><br><span class="line">^C</span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> a.log </span><br><span class="line">a</span><br><span class="line">b</span><br><span class="line">c</span><br></pre></td></tr></table></figure>
+
+<p>多行重定向</p>
+<ul>
+<li><p>使用 “&lt;&lt;终止词” 命令从键盘把多行重导向给STDIN，直到终止词位置之前的所有文本都发送给STDIN</p>
+</li>
+<li><p>终止词可以是任何一个或多个符号，比如：!，@，$，EOF（End Of File），magedu等，其中EOF比较常用</p>
+</li>
+<li><p>cat &gt; file &lt;&lt;终止词</p>
+</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> &gt; b.log &lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">&gt; a</span></span><br><span class="line"><span class="string">&gt; b</span></span><br><span class="line"><span class="string">&gt; c</span></span><br><span class="line"><span class="string">&gt; EOF</span></span><br><span class="line">[root@centos7 ~]#<span class="built_in">cat</span> b.log </span><br><span class="line">a</span><br><span class="line">b</span><br><span class="line">c</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-3-高级重定向写法"><a href="#4-2-3-高级重定向写法" class="headerlink" title="4.2.3 高级重定向写法"></a>4.2.3 高级重定向写法</h3><p>格式1</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">cmd &lt;&lt;&lt;<span class="string">&quot;string&quot;</span>   <span class="comment">#cmd要支持标准输入，字符串把传给cmd，作为这个命令的标准输入</span></span><br><span class="line">[root@centos7 ~]#bc &lt;&lt;&lt; <span class="string">&quot;2+2&quot;</span></span><br><span class="line">4</span><br><span class="line"></span><br><span class="line">[root@rocky8 ~]#<span class="built_in">tr</span> <span class="string">&#x27;a-z&#x27;</span> <span class="string">&#x27;A-Z&#x27;</span> &lt;&lt;&lt;<span class="string">&quot;I am wang&quot;</span></span><br><span class="line">I AM WANG</span><br></pre></td></tr></table></figure>
+
+<p>格式2</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">cmd1 &lt; &lt;(cmd2)  <span class="comment">#把cmd2的输出写到一个临时文件里，然后把这个文件的内容传给cmd1，作为cmd1的标准输入</span></span><br><span class="line"></span><br><span class="line">&lt;(cmd2) 表示把cmd2的输出写入一个临时文件，注意：&lt;和（之间无空格</span><br><span class="line">cmd1 &lt; 标准输入重定向</span><br><span class="line">把两个合起来，就是把cmd2的输出stdout传递给cmd1作为输入stdin, 中间通过临时文件做传递</span><br><span class="line">[root@rocky8 ~]#<span class="built_in">tr</span> <span class="string">&#x27;a-z&#x27;</span> <span class="string">&#x27;A-Z&#x27;</span> &lt; &lt;(<span class="built_in">echo</span> I am wang)</span><br><span class="line">I AM WANG</span><br><span class="line">[root@rocky8 ~]#ll  &lt;(<span class="built_in">echo</span> I am wang)</span><br><span class="line">lr-x------ 1 root root 64 Nov 26 17:20 /dev/fd/63 -&gt; <span class="string">&#x27;pipe:[30384]&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-3-管道符"><a href="#4-3-管道符" class="headerlink" title="4.3 管道符"></a>4.3 管道符</h2><p>管道（使用符号“|”表示）用来连接多个命令，将前一个命令的输出作为后一个命令的输入</p>
+<p>使用管道，要求前一个命令必须支持标准输出，后一个命令必须支持标准输入</p>
+<p>格式：命令1 | 命令2 | 命令3 | …</p>
+<p>功能说明：</p>
+<ul>
+<li><p>将命令1的STDOUT发送给命令2的STDIN，命令2的STDOUT发送到命令3的STDIN</p>
+</li>
+<li><p>所有命令会在当前shell进程的子shell进程中执行</p>
+</li>
+<li><p>组合多种工具的功能</p>
+</li>
+</ul>
+<p>STDERR默认不能通过管道转发，可利用2&gt;&amp;1 或 |&amp; 实现，格式如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">命令1 2&gt;&amp;1 | 命令2</span><br><span class="line">命令1 |&amp; 命令2</span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#<span class="built_in">df</span> | <span class="built_in">tr</span> -s <span class="string">&#x27; &#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> /data /xxx | <span class="built_in">tr</span> <span class="string">&#x27;a-z&#x27;</span> <span class="string">&#x27;A-Z&#x27;</span></span><br><span class="line"><span class="built_in">ls</span>: cannot access <span class="string">&#x27;/xxx&#x27;</span>: No such file or directory</span><br><span class="line">/DATA:</span><br><span class="line">ALL.LOG</span><br><span class="line">F1.TXT</span><br><span class="line">PASSWD.LOG</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> /data /xxx 2&gt;&amp;1 | <span class="built_in">tr</span> <span class="string">&#x27;a-z&#x27;</span> <span class="string">&#x27;A-Z&#x27;</span></span><br><span class="line">LS: CANNOT ACCESS <span class="string">&#x27;/XXX&#x27;</span>: NO SUCH FILE OR DIRECTORY</span><br><span class="line">/DATA:</span><br><span class="line">ALL.LOG</span><br><span class="line">F1.TXT</span><br><span class="line">PASSWD.LOG</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> /data /xxx |&amp; <span class="built_in">tr</span> <span class="string">&#x27;a-z&#x27;</span> <span class="string">&#x27;A-Z&#x27;</span></span><br><span class="line">LS: CANNOT ACCESS <span class="string">&#x27;/XXX&#x27;</span>: NO SUCH FILE OR DIRECTORY</span><br><span class="line">/DATA:</span><br><span class="line">ALL.LOG</span><br><span class="line">F1.TXT</span><br><span class="line">PASSWD.LOG</span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#转换为大写字母</span></span><br><span class="line"><span class="built_in">ls</span> | <span class="built_in">tr</span> ‘a-z’ ‘A-Z’</span><br><span class="line"><span class="comment">#less实现分页地查看输入</span></span><br><span class="line"><span class="built_in">ls</span> -l /etc | less</span><br><span class="line"><span class="comment">#算术运算</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;2^3&quot;</span> |bc</span><br></pre></td></tr></table></figure>
+
+<p>范例：实现邮件服务</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky86 ~]# vim /etc/mail.rc</span><br><span class="line"><span class="built_in">set</span> from=1701785325@qq.com</span><br><span class="line"><span class="built_in">set</span> smtp=smtp.qq.com</span><br><span class="line"><span class="built_in">set</span> smtp-auth-user=1701785325@qq.com</span><br><span class="line"><span class="built_in">set</span> smtp-auth-password=meenopnxjawzbfcc</span><br><span class="line"><span class="built_in">set</span> smtp-auth=login</span><br><span class="line"><span class="built_in">set</span> ssl-verify=ignore</span><br><span class="line"></span><br><span class="line"><span class="comment">#mail通过电子邮件发送输入</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;test email&quot;</span> | mail  -s <span class="string">&quot;test&quot;</span> wang@example.com</span><br></pre></td></tr></table></figure>
+
+<p>范例：用户密码修改</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky86 ~]# passwd --stdin jose</span><br><span class="line">Changing password <span class="keyword">for</span> user jose.</span><br><span class="line">magedu</span><br><span class="line">passwd: all authentication tokens updated successfully.</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]# <span class="built_in">cat</span> pass.txt</span><br><span class="line">centos</span><br><span class="line"></span><br><span class="line">[root@rocky86 ~]# passwd --stdin jose &lt; pass.txt</span><br><span class="line">Changing password <span class="keyword">for</span> user jose.</span><br><span class="line">passwd: all authentication tokens updated successfully.</span><br><span class="line"></span><br><span class="line">[root@rocky86 ~]# <span class="built_in">cat</span> pass.txt | passwd --stdin jose</span><br><span class="line">Changing password <span class="keyword">for</span> user jose.</span><br><span class="line">passwd: all authentication tokens updated successfully.</span><br><span class="line"></span><br><span class="line">[root@rocky86 ~]# <span class="built_in">echo</span> magedu | passwd --stdin jose</span><br><span class="line">Changing password <span class="keyword">for</span> user jose.</span><br><span class="line">passwd: all authentication tokens updated successfully.</span><br><span class="line"></span><br><span class="line">[root@rocky86 ~]# <span class="built_in">echo</span> magedu | passwd --stdin jose &amp;&gt; /dev/null</span><br></pre></td></tr></table></figure>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/Linux/linux-basics/file-structure-and-IO-redirects/">https://aquapluto.github.io/Linux/linux-basics/file-structure-and-IO-redirects/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/linux%E5%9F%BA%E7%A1%80/">linux基础</a></div><div class="post-share"><div class="social-share" data-image="/img/paper4.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/Linux/linux-basics/user-permission/" title="用户和权限管理"><img class="cover" src="/img/paper1.jpg" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">用户和权限管理</div></div><div class="info-2"><div class="info-item-1">1 Linux权限模型资源分派： ...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/introduce/" title="linux基础"><img class="cover" src="/img/paper5.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">linux基础</div></div><div class="info-2"><div class="info-item-1">1 系统构成与shell核心初始s...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/Linux/linux-basics/file-command/" title="文件管理工具"><img class="cover" src="/img/paper4.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">文件管理工具</div></div><div class="info-2"><div class="info-item-1">1 文件通配符匹配文件名的字符串 ...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/regular-expression/" title="正则表达式"><img class="cover" src="/img/paper3.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-19</div><div class="info-item-2">正则表达式</div></div><div class="info-2"><div class="info-item-1">1 基本正则表达式正则表达式匹配的...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/text-command/" title="文本管理工具"><img class="cover" src="/img/paper2.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">文本管理工具</div></div><div class="info-2"><div class="info-item-1">1 文本编译工具vim常用选项 1...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/introduce/" title="linux基础"><img class="cover" src="/img/paper5.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-18</div><div class="info-item-2">linux基础</div></div><div class="info-2"><div class="info-item-1">1 系统构成与shell核心初始s...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/GSA/" title="文本处理三剑客"><img class="cover" src="/img/paper1.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-21</div><div class="info-item-2">文本处理三剑客</div></div><div class="info-2"><div class="info-item-1">一、grep作用：文本搜索工具，根...</div></div></div></a><a class="pagination-related" href="/Linux/linux-basics/user-permission/" title="用户和权限管理"><img class="cover" src="/img/paper1.jpg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-08-19</div><div class="info-item-2">用户和权限管理</div></div><div class="info-2"><div class="info-item-1">1 Linux权限模型资源分派： ...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">78</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">16</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84"><span class="toc-text">1 文件系统目录结构</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-%E5%90%84%E4%B8%AA%E7%9B%AE%E5%BD%95%E5%8A%9F%E8%83%BD"><span class="toc-text">1.1 各个目录功能</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-Linux%E4%B8%8B%E7%9A%84%E6%96%87%E4%BB%B6%E7%B1%BB%E5%9E%8B"><span class="toc-text">1.2 Linux下的文件类型</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%92%8Cinode%E8%A1%A8"><span class="toc-text">2 文件系统和inode表</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-text">2.1 文件系统</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-%E6%9F%A5%E6%89%BE%E6%96%87%E4%BB%B6%E5%86%85%E5%AE%B9%E7%9A%84%E5%BA%95%E5%B1%82%E6%B5%81%E7%A8%8B"><span class="toc-text">2.2 查找文件内容的底层流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E5%88%9B%E5%BB%BA%E3%80%81%E4%BF%AE%E6%94%B9%E3%80%81%E5%88%A0%E9%99%A4%E6%96%87%E4%BB%B6%E5%AF%B9%E4%BA%8Einode%E5%8F%B7%E7%9A%84%E5%BD%B1%E5%93%8D"><span class="toc-text">2.3 创建、修改、删除文件对于inode号的影响</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-%E7%A1%AC%E9%93%BE%E6%8E%A5%E5%92%8C%E8%BD%AF%E9%93%BE%E6%8E%A5"><span class="toc-text">3 硬链接和软链接</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E7%A1%AC%E9%93%BE%E6%8E%A5"><span class="toc-text">3.1 硬链接</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E8%BD%AF%E9%93%BE%E6%8E%A5"><span class="toc-text">3.2 软链接</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#4-IO%E9%87%8D%E5%AE%9A%E5%90%91%E5%92%8C%E7%AE%A1%E9%81%93"><span class="toc-text">4 IO重定向和管道</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1-%E6%96%87%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%AC%A6"><span class="toc-text">4.1 文件描述符</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-2-I-O%E9%87%8D%E5%AE%9A%E5%90%91-redirect"><span class="toc-text">4.2 I&#x2F;O重定向 redirect</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-1-%E6%A0%87%E5%87%86%E8%BE%93%E5%87%BA%E5%92%8C%E9%94%99%E8%AF%AF%E9%87%8D%E5%AE%9A%E5%90%91"><span class="toc-text">4.2.1 标准输出和错误重定向</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-2-%E6%A0%87%E5%87%86%E8%BE%93%E5%85%A5%E9%87%8D%E5%AE%9A%E5%90%91"><span class="toc-text">4.2.2 标准输入重定向</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-3-%E9%AB%98%E7%BA%A7%E9%87%8D%E5%AE%9A%E5%90%91%E5%86%99%E6%B3%95"><span class="toc-text">4.2.3 高级重定向写法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3-%E7%AE%A1%E9%81%93%E7%AC%A6"><span class="toc-text">4.3 管道符</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/role/" title="role"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="role"/></a><div class="content"><a class="title" href="/CICD/ansible/role/" title="role">role</a><time datetime="2025-08-27T10:49:36.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/playbook/" title="playbook"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="playbook"/></a><div class="content"><a class="title" href="/CICD/ansible/playbook/" title="playbook">playbook</a><time datetime="2025-08-27T10:49:30.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/module/" title="module"><img src="/img/paper4.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="module"/></a><div class="content"><a class="title" href="/CICD/ansible/module/" title="module">module</a><time datetime="2025-08-27T10:49:25.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/command/" title="command"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="command"/></a><div class="content"><a class="title" href="/CICD/ansible/command/" title="command">command</a><time datetime="2025-08-27T10:49:19.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/CICD/ansible/deploy/" title="deploy"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="deploy"/></a><div class="content"><a class="title" href="/CICD/ansible/deploy/" title="deploy">deploy</a><time datetime="2025-08-27T10:49:09.000Z" title="发表于 2025-08-27 18:49">2025-08-27</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

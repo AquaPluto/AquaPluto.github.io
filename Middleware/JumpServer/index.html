@@ -1,0 +1,877 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>JumpServer | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="1 堡垒机和JumpServer1.1 跳板机和堡垒机跳板机 跳板机是一种用于单点登陆的主机应用系统。跳板机通常是由一台服务器能过特定的软件实现，维护人员在维护过程中，首先要统一登录到这台服务器上，然后从这台服务器再登录到目标设备进行维护。但跳板机没有实现对运维人员操作行为的控制和审计，此外，跳板机存在严重的安全风险，一旦跳板机系统被攻入，则将后端资源风险完全暴露无遗。对于一些服务（如:telne">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JumpServer">
+<meta property="og:url" content="https://aquapluto.github.io/Middleware/JumpServer/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="1 堡垒机和JumpServer1.1 跳板机和堡垒机跳板机 跳板机是一种用于单点登陆的主机应用系统。跳板机通常是由一台服务器能过特定的软件实现，维护人员在维护过程中，首先要统一登录到这台服务器上，然后从这台服务器再登录到目标设备进行维护。但跳板机没有实现对运维人员操作行为的控制和审计，此外，跳板机存在严重的安全风险，一旦跳板机系统被攻入，则将后端资源风险完全暴露无遗。对于一些服务（如:telne">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper1.jpg">
+<meta property="article:published_time" content="2023-08-21T02:59:41.000Z">
+<meta property="article:modified_time" content="2025-09-10T03:32:24.155Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="JumpServer">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper1.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "JumpServer",
+  "url": "https://aquapluto.github.io/Middleware/JumpServer/",
+  "image": "https://aquapluto.github.io/img/paper1.jpg",
+  "datePublished": "2023-08-21T02:59:41.000Z",
+  "dateModified": "2025-09-10T03:32:24.155Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/Middleware/JumpServer/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'JumpServer',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">138</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">42</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/software-manage/"><span>软件包管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/OOM/"><span>OOM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/swap/"><span>Swap分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/data-synchronization/"><span>数据的实时同步</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/mail/"><span>邮件服务</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/kernel-manage/"><span>内核和启动管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-lock/"><span>进程锁</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/queue/"><span>队列实现线程并发控制</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/MySQL/SQL/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/Redis/deploy/"><span>部署安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Tomcat/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>存储</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/conspect/"><span>存储概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/nfs/"><span>NFS</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/conspect/"><span>Docker概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/image/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/container/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/volume/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/network/"><span>网络管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/compose/"><span>Docker-Compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/conspect/"><span>镜像概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/dockerfile/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/build/"><span>构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/harbor/"><span>镜像仓库</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/management/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-cgroup/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-usage/"><span>监控容器真实的cpu使用率</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/containerd/"><span>Containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>K8s</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kubernetes概论</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/architecture/"><span>Kubernetes架构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/cri/"><span>容器运行时接口CRI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/list-watch/"><span>List-Watch机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/object/"><span>Kubernetes对象</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/namespace/"><span>Namespace</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/kubectl/"><span>kubectl命令</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>部署安装</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/explanation/"><span>部署说明</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/docker/"><span>基于docker部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/containerd/"><span>基于containerd部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/cluster/"><span>集群管理指南</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Pod</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/conspect/"><span>Pod概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/configuration/"><span>Pod的配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/schedule/"><span>Pod的调度</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/eviction/"><span>Pod的驱逐</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>控制器</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/introduce/"><span>控制器介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/deployment/"><span>Deployment</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/statefulset/"><span>StatefulSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/daemonset/"><span>DaemonSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/job-cronjob/"><span>Job和CronJob</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/HPA/"><span>HPA</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/operator/"><span>Operator</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务发现与负载均衡</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/service/"><span>Service</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/ingress/"><span>Ingress</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/coredns/"><span>CoreDNS</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/localdns/"><span>LocalDNS</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>数据存储持久化</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/csi/"><span>存储接口CSI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/pv-pvc/"><span>PV和PVC</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/storageclass/"><span>StorageClass</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/configmap-secret/"><span>ConfigMap和Secret</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>认证与鉴权体系</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/conspect/"><span>体系概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/kubeconfig/"><span>kubeconfig</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/user-account/"><span>User Account</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/service-account/"><span>Service Account</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/introduce/"><span>prometheus概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/query-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/indicators-remarked/"><span>指标重新打标</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/pushmanager/"><span>Pushmanager</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/cluster-ha/"><span>集群与高可用</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/ha/"><span>高可用架构</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/grafana/"><span>Grafana</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/streaming/"><span>基于流处理的可观测性架构</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper1.jpg);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">JumpServer</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/software-manage/"><span>软件包管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/OOM/"><span>OOM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/swap/"><span>Swap分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/data-synchronization/"><span>数据的实时同步</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/mail/"><span>邮件服务</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/kernel-manage/"><span>内核和启动管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-lock/"><span>进程锁</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/queue/"><span>队列实现线程并发控制</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/MySQL/SQL/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/Redis/deploy/"><span>部署安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Tomcat/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>存储</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/conspect/"><span>存储概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/nfs/"><span>NFS</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/conspect/"><span>Docker概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/image/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/container/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/volume/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/network/"><span>网络管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/compose/"><span>Docker-Compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/conspect/"><span>镜像概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/dockerfile/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/build/"><span>构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/harbor/"><span>镜像仓库</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/management/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-cgroup/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-usage/"><span>监控容器真实的cpu使用率</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/containerd/"><span>Containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>K8s</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kubernetes概论</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/architecture/"><span>Kubernetes架构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/cri/"><span>容器运行时接口CRI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/list-watch/"><span>List-Watch机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/object/"><span>Kubernetes对象</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/namespace/"><span>Namespace</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/kubectl/"><span>kubectl命令</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>部署安装</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/explanation/"><span>部署说明</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/docker/"><span>基于docker部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/containerd/"><span>基于containerd部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/cluster/"><span>集群管理指南</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Pod</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/conspect/"><span>Pod概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/configuration/"><span>Pod的配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/schedule/"><span>Pod的调度</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/eviction/"><span>Pod的驱逐</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>控制器</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/introduce/"><span>控制器介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/deployment/"><span>Deployment</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/statefulset/"><span>StatefulSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/daemonset/"><span>DaemonSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/job-cronjob/"><span>Job和CronJob</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/HPA/"><span>HPA</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/operator/"><span>Operator</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务发现与负载均衡</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/service/"><span>Service</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/ingress/"><span>Ingress</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/coredns/"><span>CoreDNS</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/localdns/"><span>LocalDNS</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>数据存储持久化</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/csi/"><span>存储接口CSI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/pv-pvc/"><span>PV和PVC</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/storageclass/"><span>StorageClass</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/configmap-secret/"><span>ConfigMap和Secret</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>认证与鉴权体系</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/conspect/"><span>体系概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/kubeconfig/"><span>kubeconfig</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/user-account/"><span>User Account</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/service-account/"><span>Service Account</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/introduce/"><span>prometheus概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/query-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/indicators-remarked/"><span>指标重新打标</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/pushmanager/"><span>Pushmanager</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/cluster-ha/"><span>集群与高可用</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/ha/"><span>高可用架构</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/grafana/"><span>Grafana</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/streaming/"><span>基于流处理的可观测性架构</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">JumpServer</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-08-21T02:59:41.000Z" title="发表于 2023-08-21 10:59">2023-08-21</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-09-10T03:32:24.155Z" title="更新于 2025-09-10 11:32">2025-09-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E4%B8%AD%E9%97%B4%E7%BB%84%E4%BB%B6/">中间组件</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">6.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>27分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="1-堡垒机和JumpServer"><a href="#1-堡垒机和JumpServer" class="headerlink" title="1 堡垒机和JumpServer"></a>1 堡垒机和JumpServer</h1><h2 id="1-1-跳板机和堡垒机"><a href="#1-1-跳板机和堡垒机" class="headerlink" title="1.1 跳板机和堡垒机"></a>1.1 跳板机和堡垒机</h2><p><strong>跳板机</strong></p>
+<p>跳板机是一种用于单点登陆的主机应用系统。跳板机通常是由一台服务器能过特定的软件实现，维护人员在维护过程中，首先要统一登录到这台服务器上，然后从这台服务器再登录到目标设备进行维护。但跳板机没有实现对运维人员操作行为的控制和审计，此外，跳板机存在严重的安全风险，一旦跳板机系统被攻入，则将后端资源风险完全暴露无遗。对于一些服务（如:telnet）可以通过跳板机来完成一定的<br>控制访问，但是对于更多的服务（SSH、RDP等）来讲，就显得力不从心了。</p>
+<p><strong>堡垒机</strong></p>
+<p>由于跳板机的不足，更多的组织需要更先进、更好的安全技术,来实现运维操作管理和安全。堡垒机开始以独立的产品形态被广泛部署，有效降低了运维操作风险，使得运维操作管理变得更简单、更安全。堡垒机能满足角色管理与授权审批、信息资源访问控制、操作记录和审计、系统变更和维护控制要求，并生成一些统计报表配合管理规范，从而不断提升IT内控的合规性。</p>
+<p><img src="/Middleware/JumpServer/image-20240414221114481.png" alt="image-20240414221114481"></p>
+<h2 id="1-2-JumpServer简介"><a href="#1-2-JumpServer简介" class="headerlink" title="1.2 JumpServer简介"></a>1.2 JumpServer简介</h2><p>JumpServer 是全球首款完全开源的堡垒机，使用 GNU GPL v2.0 开源协议, 是符合 4A 的专业运维审计系统。为互联网企业提供了认证，授权，审计，自动化运维等功能。使用 Python &#x2F; Django 进行开发, 遵循 Web 2.0 规范, 配备了业界领先的 Web Terminal 解决方案，交互界面美观、用户体验好。采纳分布式架构, 支持多机房跨区域部署, 中心节点提供 API, 各机房部署登录节点, 可横向扩展、无并发访问限制。现已支持管理 SSH、 Telnet、 RDP、 VNC 协议资产。</p>
+<p>官方地址： <a target="_blank" rel="noopener" href="http://www.jumpserver.org/">http://www.jumpserver.org/</a></p>
+<p>github项目: <a target="_blank" rel="noopener" href="https://github.com/jumpserver">https://github.com/jumpserver</a></p>
+<h2 id="1-3-JumpServer生产应用场景"><a href="#1-3-JumpServer生产应用场景" class="headerlink" title="1.3 JumpServer生产应用场景"></a>1.3 JumpServer生产应用场景</h2><p><img src="/Middleware/JumpServer/image-20240414221312351.png" alt="image-20240414221312351"></p>
+<h2 id="1-4-JumpServer的优势和功能"><a href="#1-4-JumpServer的优势和功能" class="headerlink" title="1.4 JumpServer的优势和功能"></a>1.4 JumpServer的优势和功能</h2><h3 id="1-4-1-特色优势"><a href="#1-4-1-特色优势" class="headerlink" title="1.4.1 特色优势"></a>1.4.1 特色优势</h3><ul>
+<li>开源: 零门槛，线上快速获取和安装</li>
+<li>分布式: 轻松支持大规模并发访问；</li>
+<li>无插件: 仅需浏览器，极致的 Web Terminal 使用体验</li>
+<li>多云支持: 一套系统，同时管理不同云上面的资产</li>
+<li>云端存储: 审计录像云端存储，永不丢失</li>
+<li>多租户: 一套系统，多个子公司和部门同时使用</li>
+</ul>
+<h3 id="1-4-2-功能列表"><a href="#1-4-2-功能列表" class="headerlink" title="1.4.2 功能列表"></a>1.4.2 功能列表</h3><p>堡垒机四个核心能力: 运维安全审计的4A规范</p>
+<p><img src="/Middleware/JumpServer/image-20240414221413667.png" alt="image-20240414221413667"></p>
+<table>
+<thead>
+<tr>
+<th>身份认证 Authentication</th>
+<th>登录认证</th>
+<th>资源统一登录与认证</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>LDAP&#x2F;AD 认证</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>RADIUS 认证</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>OpenID 认证（实现单点登录）</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CAS 认证 （实现单点登录）</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MFA认证</td>
+<td>MFA 二次认证（Google Authenticator）</td>
+<td></td>
+</tr>
+<tr>
+<td>RADIUS 二次认证</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>登录复核（X-PACK）</td>
+<td>用户登录行为受管理员的监管与控制</td>
+<td></td>
+</tr>
+<tr>
+<td>账号管理 Account</td>
+<td>集中账号</td>
+<td>管理用户管理</td>
+</tr>
+<tr>
+<td>系统用户管理</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>统一密码</td>
+<td>资产密码托管</td>
+<td></td>
+</tr>
+<tr>
+<td>自动生成密码</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>自动推送密码</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>密码过期设置</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>批量改密（X-PACK）</td>
+<td>定期批量改密</td>
+<td></td>
+</tr>
+<tr>
+<td>多种密码策略</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>多云纳管（X-PACK）</td>
+<td>对私有云、公有云资产自动统一纳管</td>
+<td></td>
+</tr>
+<tr>
+<td>收集用户（X-PACK）</td>
+<td>自定义任务定期收集主机用户</td>
+<td></td>
+</tr>
+<tr>
+<td>密码匣子（X-PACK）</td>
+<td>统一对资产主机的用户密码进行查看、更新、测试操作</td>
+<td></td>
+</tr>
+<tr>
+<td>授权控制 Authorization</td>
+<td>多维授权</td>
+<td>对用户、用户组、资产、资产节点、应用以及系统用户进行授权</td>
+</tr>
+<tr>
+<td>资产授权</td>
+<td>资产以树状结构进行展示</td>
+<td></td>
+</tr>
+<tr>
+<td>资产和节点均可灵活授权</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>节点内资产自动继承授权</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>子节点自动继承父节点授权</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>应用授权</td>
+<td>实现更细粒度的应用级授权</td>
+<td></td>
+</tr>
+<tr>
+<td>MySQL 数据库应用、RemoteApp 远程应用（X-PACK）</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>动作授权</td>
+<td>实现对授权资产的文件上传、下载以及连接动作的控制</td>
+<td></td>
+</tr>
+<tr>
+<td>时间授权</td>
+<td>实现对授权资源使用时间段的限制</td>
+<td></td>
+</tr>
+<tr>
+<td>特权指令</td>
+<td>实现对特权指令的使用（支持黑白名单）</td>
+<td></td>
+</tr>
+<tr>
+<td>命令过滤</td>
+<td>实现对授权系统用户所执行的命令进行控制</td>
+<td></td>
+</tr>
+<tr>
+<td>文件传输</td>
+<td>SFTP 文件上传&#x2F;下载</td>
+<td></td>
+</tr>
+<tr>
+<td>文件管理</td>
+<td>实现 Web SFTP 文件管理</td>
+<td></td>
+</tr>
+<tr>
+<td>工单管理（X-PACK）</td>
+<td>支持对用户登录请求行为进行控制</td>
+<td></td>
+</tr>
+<tr>
+<td>组织管理（X-PACK）</td>
+<td>实现多租户管理与权限隔离</td>
+<td></td>
+</tr>
+<tr>
+<td>安全审计 Audit</td>
+<td>操作审计</td>
+<td>用户操作行为审计</td>
+</tr>
+<tr>
+<td>会话审计</td>
+<td>在线会话内容审计</td>
+<td></td>
+</tr>
+<tr>
+<td>历史会话内容审计</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>录像审计</td>
+<td>支持对 Linux、Windows等资产操作的录像进行回放审计</td>
+<td></td>
+</tr>
+<tr>
+<td>支持对 RemoteApp（X-PACK）、MySQL 等应用操作的录像进行回放审计</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>指令审计</td>
+<td>支持对资产和应用等操作的命令进行审计</td>
+<td></td>
+</tr>
+<tr>
+<td>文件传输</td>
+<td>可对文件的上传、下载记录进行审计</td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="1-5-JumpServer组成"><a href="#1-5-JumpServer组成" class="headerlink" title="1.5 JumpServer组成"></a>1.5 JumpServer组成</h2><p>Lina前端 UI 项目，实现web页面展示，主要使用 Vue，Element UI 完成</p>
+<p>Core现指 Jumpserver 管理后台，是核心组件（Core）, 使用 Django Class Based View 风格开发，支持 Restful API。</p>
+<p>Coco&#x2F;Koko：实现了 SSH Server 和 Web Terminal Server 的组件，提供 SSH 和 WebSocket 接口, 使用Paramiko 和 Flask 开发。Koko 是 Go 版本的 coco，重构了 coco 的 SSH&#x2F;SFTP 服务和 Web Terminal 服务。</p>
+<p>Luna现在是 Web Terminal 前端，计划前端页面都由该项目提供，Jumpserver 只提供 API，不再负责后台渲染html等。主要使用Angular CLI 完成</p>
+<p>Lion：Lion 使用了 Apache 软件基金会的开源项目 Guacamole，JumpServer 使用 Golang 和 Vue 重构了 Guacamole 实现 RDP&#x2F;VNC 协议跳板机功能。</p>
+<p><img src="/Middleware/JumpServer/image-20240418225427251.png" alt="image-20240418225427251"></p>
+<p><img src="/Middleware/JumpServer/image-20240418225442643.png" alt="image-20240418225442643"></p>
+<h1 id="2-JumpServer安装"><a href="#2-JumpServer安装" class="headerlink" title="2 JumpServer安装"></a>2 JumpServer安装</h1><p>官方说明：<a target="_blank" rel="noopener" href="https://docs.jumpserver.org/zh/master/install/setup_by_fast/">https://docs.jumpserver.org/zh/master/install/setup_by_fast/</a></p>
+<h2 id="2-1-安装要求"><a href="#2-1-安装要求" class="headerlink" title="2.1 安装要求"></a>2.1 安装要求</h2><p>JumpServer 环境要求:</p>
+<ul>
+<li>硬件配置: 2个CPU核心, 4G 内存, 50G 硬盘（最低）</li>
+<li>操作系统: Linux 发行版 x86_64</li>
+<li>Python &#x3D; 3.6.x</li>
+<li>MySQL Server ≥ 5.6 或者 Mariadb Server ≥ 5.5.56 数据库编码要求 uft8,新版要求5.7以上</li>
+<li>Redis: 新版要求6.0以上</li>
+</ul>
+<h2 id="2-2-安装方法介绍"><a href="#2-2-安装方法介绍" class="headerlink" title="2.2 安装方法介绍"></a>2.2 安装方法介绍</h2><p>官方提供了多种安装方法</p>
+<ul>
+<li>手动部署: 按组件逐个实现</li>
+<li>极速部署: 资产数量不多，或者测试体验的用户请使用本脚本快速部署</li>
+<li>容器部署: 基于 docker 实现</li>
+<li>分布式部署: 适用大型环境</li>
+</ul>
+<h2 id="2-3-基于容器部署"><a href="#2-3-基于容器部署" class="headerlink" title="2.3 基于容器部署"></a>2.3 基于容器部署</h2><p>官方文档:</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/jumpserver/Dockerfile/tree/master/allinone</span><br><span class="line">https://docs.jumpserver.org/zh/master/install/docker_install/</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-1-环境说明"><a href="#2-3-1-环境说明" class="headerlink" title="2.3.1 环境说明"></a>2.3.1 环境说明</h3><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/jumpserver/Dockerfile/tree/master/allinone</span><br></pre></td></tr></table></figure>
+
+<p>使用外置 MySQL 数据库和 Redis:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">- 外置数据库要求 MySQL 版本大于等于 5.7</span><br><span class="line">- 外置 Redis 要求 Redis 版本大于等于 6.0</span><br><span class="line"></span><br><span class="line"># 自行部署 MySQL 可以参考</span><br><span class="line">(https://docs.jumpserver.org/zh/master/install/setup_by_lb/#mysql)</span><br><span class="line"> </span><br><span class="line"># mysql 创建用户并赋予权限, 请自行替换 nu4x599Wq7u0Bn8EABh3J91G 为自己的密码</span><br><span class="line">mysql -u root -p</span><br><span class="line">create database jumpserver default charset &#x27;utf8&#x27;;</span><br><span class="line">create user &#x27;jumpserver&#x27;@&#x27;%&#x27; identified by &#x27;nu4x599Wq7u0Bn8EABh3J91G&#x27;;</span><br><span class="line">grant all on jumpserver.* to &#x27;jumpserver&#x27;@&#x27;%&#x27;;</span><br><span class="line">flush privileges;</span><br><span class="line"> </span><br><span class="line"># 自行部署 Redis 可以参考</span><br><span class="line">(https://docs.jumpserver.org/zh/master/install/setup_by_lb/#redis)</span><br></pre></td></tr></table></figure>
+
+<p><strong>基于容器,安装完毕后可以通过以下方式访问</strong></p>
+<ul>
+<li>浏览器访问: http:&#x2F;&#x2F;&lt;容器所在服务器IP&gt;</li>
+<li>默认管理员账户 admin 密码 admin</li>
+<li>SSH 访问: ssh -p 2222 &lt;容器所在服务器IP&gt;</li>
+<li>XShell 等工具请添加 connection 连接, 默认 ssh 端口 2222</li>
+</ul>
+<h3 id="2-3-2-安装-docker-环境"><a href="#2-3-2-安装-docker-环境" class="headerlink" title="2.3.2 安装 docker 环境"></a>2.3.2 安装 docker 环境</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#apt update &amp;&amp; apt list docker.io</span><br><span class="line">[root@ubuntu2004 ~]#apt-cache madison docker.io</span><br><span class="line">[root@ubuntu2004 ~]#apt -y install docker.io</span><br><span class="line">[root@ubuntu2004 ~]#docker version</span><br><span class="line"></span><br><span class="line"><span class="comment">#镜像加速(可选)</span></span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">echo</span> <span class="string">&#x27;&#123;&quot;registry-mirrors&quot;:[&quot;http://si7y70hh.mirror.aliyuncs.com&quot;], &quot;insecure-registries&quot;:[&quot;harbor.wang.org:80&quot;]&#x27;</span> &gt; /etc/docker/daemon.json</span><br><span class="line"></span><br><span class="line">[root@ubuntu2004 ~]#systemctl restart docker</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-3-安装-MySQL-服务"><a href="#2-3-3-安装-MySQL-服务" class="headerlink" title="2.3.3 安装 MySQL 服务"></a>2.3.3 安装 MySQL 服务</h3><p>官方说明:</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://docs.jumpserver.org/zh/master/install/prod/distributed_03/</span><br></pre></td></tr></table></figure>
+
+<p>MySQL要求</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">create database jumpserver default charset &#x27;utf8&#x27;;</span><br><span class="line">create user &#x27;jumpserver&#x27;@&#x27;%&#x27; identified by &#x27;nu4x599Wq7u0Bn8EABh3J91G&#x27;;</span><br><span class="line">grant all on jumpserver.* to &#x27;jumpserver&#x27;@&#x27;%&#x27;;</span><br><span class="line">flush privileges;</span><br></pre></td></tr></table></figure>
+
+<p>注意：JumpServer-v2.28.7之前版本默认不支持MySQL8.0，选择MySQL5.7</p>
+<h4 id="2-3-3-1-下载-MySQL-镜像查看默认配置"><a href="#2-3-3-1-下载-MySQL-镜像查看默认配置" class="headerlink" title="2.3.3.1 下载 MySQL 镜像查看默认配置"></a>2.3.3.1 下载 MySQL 镜像查看默认配置</h4><p>下载MySQL镜像并运行, 查看当前默认配置不符合 JumpServer 安装要求，跳转到 2.3.3.2 执行操作</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line">#下载MySQL镜像并启动</span><br><span class="line">[root@ubuntu2004 ~]#docker run --rm --name mysql -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=jumpserver -e MYSQL_USER=jumpserver -e MYSQL_PASSWORD=123456 -d -p 3306:3306 mysql:5.7.30</span><br><span class="line"></span><br><span class="line">#查看默认的MySQL容器配置不符合jumpserver要求</span><br><span class="line">[root@ubuntu2004 ~]#docker exec -it mysql bash</span><br><span class="line">root@f44e1c85f088:/# mysql -uroot -p123456</span><br><span class="line">mysql&gt; show create database jumpserver;</span><br><span class="line">+------------+-----------------------------------------------------------------------+</span><br><span class="line">| Database   | Create Database                         								 |</span><br><span class="line">+------------+-----------------------------------------------------------------------+</span><br><span class="line">| jumpserver | CREATE DATABASE `jumpserver` /*!40100 DEFAULT CHARACTER SET latin1 */ |</span><br><span class="line">+------------+-----------------------------------------------------------------------+</span><br><span class="line">1 row in set (0.01 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; select user,host from mysql.user;</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| user          | host   	|</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| jumpserver  	| %     	|</span><br><span class="line">| root     		| %     	|</span><br><span class="line">| mysql.session | localhost |</span><br><span class="line">| mysql.sys   	| localhost |</span><br><span class="line">| root     		| localhost |</span><br><span class="line">+---------------+-----------+</span><br><span class="line">5 rows in set (0.00 sec)</span><br><span class="line"></span><br><span class="line">mysql&gt; exit</span><br><span class="line"></span><br><span class="line">#查看配置文件路径</span><br><span class="line">root@f44e1c85f088:/# cat /etc/mysql/mysql.cnf</span><br><span class="line">......</span><br><span class="line">!includedir /etc/mysql/conf.d/</span><br><span class="line">!includedir /etc/mysql/mysql.conf.d/</span><br><span class="line"></span><br><span class="line">#默认配置文件</span><br><span class="line">root@f44e1c85f088:/# tree /etc/mysql/</span><br><span class="line">/etc/mysql/</span><br><span class="line">|-- conf.d</span><br><span class="line">|  	|-- docker.cnf</span><br><span class="line">|  	|-- mysql.cnf</span><br><span class="line">|  	`-- mysqldump.cnf</span><br><span class="line">|-- my.cnf -&gt; /etc/alternatives/my.cnf</span><br><span class="line">|-- my.cnf.fallback</span><br><span class="line">|-- mysql.cnf</span><br><span class="line">`-- mysql.conf.d</span><br><span class="line">  	`-- mysqld.cnf</span><br><span class="line">2 directories, 7 files</span><br><span class="line"></span><br><span class="line">root@f44e1c85f088:/# ls -R /etc/mysql</span><br><span class="line">/etc/mysql:</span><br><span class="line">conf.d my.cnf my.cnf.fallback mysql.cnf mysql.conf.d</span><br><span class="line"></span><br><span class="line">/etc/mysql/conf.d:</span><br><span class="line">docker.cnf mysql.cnf mysqldump.cnf</span><br><span class="line"></span><br><span class="line">/etc/mysql/mysql.conf.d:</span><br><span class="line">mysqld.cnf</span><br><span class="line"></span><br><span class="line">#默认配置文件</span><br><span class="line">root@f44e1c85f088:/# grep &#x27;^[^#]&#x27; /etc/mysql/mysql.conf.d/mysqld.cnf</span><br><span class="line">[mysqld]</span><br><span class="line">pid-file = /var/run/mysqld/mysqld.pid</span><br><span class="line">socket = /var/run/mysqld/mysqld.sock</span><br><span class="line">datadir = /var/lib/mysql</span><br><span class="line">symbolic-links=0</span><br><span class="line"></span><br><span class="line">#默认配置文件</span><br><span class="line">root@f44e1c85f088:/# cat /etc/mysql/conf.d/mysql.cnf</span><br><span class="line">[mysql]</span><br><span class="line"></span><br><span class="line">root@f44e1c85f088:/# exit</span><br><span class="line">exit</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#docker stop mysql</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-3-2-在宿主机准备MySQL配置文件"><a href="#2-3-3-2-在宿主机准备MySQL配置文件" class="headerlink" title="2.3.3.2 在宿主机准备MySQL配置文件"></a>2.3.3.2 在宿主机准备MySQL配置文件</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#准备相关目录</span></span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">mkdir</span> -p /etc/mysql/mysql.conf.d/</span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">mkdir</span> -p /etc/mysql/conf.d/</span><br><span class="line"></span><br><span class="line"><span class="comment">#生成服务器配置文件,指定字符集</span></span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">tee</span> /etc/mysql/mysql.conf.d/mysqld.cnf &lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">[mysqld]</span></span><br><span class="line"><span class="string">pid-file= /var/run/mysqld/mysqld.pid</span></span><br><span class="line"><span class="string">socket= /var/run/mysqld/mysqld.sock</span></span><br><span class="line"><span class="string">datadir= /var/lib/mysql</span></span><br><span class="line"><span class="string">symbolic-links=0</span></span><br><span class="line"><span class="string">character-set-server=utf8  #添加此行,指定字符集</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#生成客户端配置文件,指定字符集</span></span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">tee</span> /etc/mysql/conf.d/mysql.cnf &lt;&lt;<span class="string">EOF</span></span><br><span class="line"><span class="string">[mysql]</span></span><br><span class="line"><span class="string">default-character-set=utf8  #添加此行,指定字符集</span></span><br><span class="line"><span class="string">EOF</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#查看配置文件列表</span></span><br><span class="line">[root@ubuntu2004 ~]#tree /etc/mysql/</span><br><span class="line">/etc/mysql/</span><br><span class="line">├── conf.d</span><br><span class="line">│  	└── mysql.cnf</span><br><span class="line">└── mysql.conf.d</span><br><span class="line"> 	└── mysqld.cnf</span><br><span class="line">2 directories, 2 files</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-3-3-启动-MySQL-容器"><a href="#2-3-3-3-启动-MySQL-容器" class="headerlink" title="2.3.3.3 启动 MySQL 容器"></a>2.3.3.3 启动 MySQL 容器</h4><p>将上面宿主机的设置好的配置文件挂载至MySQL容器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#docker run -d -p 3306:3306 --name mysql --restart always \</span><br><span class="line">-e MYSQL_ROOT_PASSWORD=123456 \</span><br><span class="line">-e MYSQL_DATABASE=jumpserver \</span><br><span class="line">-e MYSQL_USER=jumpserver   \</span><br><span class="line">-e MYSQL_PASSWORD=123456    \</span><br><span class="line">-v /data/mysql:/var/lib/mysql  \</span><br><span class="line">-v /etc/mysql/mysql.conf.d/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf \</span><br><span class="line">-v /etc/mysql/conf.d/mysql.cnf:/etc/mysql/conf.d/mysql.cnf  mysql:5.7.30</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-3-4-验证-MySQL"><a href="#2-3-3-4-验证-MySQL" class="headerlink" title="2.3.3.4 验证 MySQL"></a>2.3.3.4 验证 MySQL</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> -it mysql sh</span><br><span class="line"><span class="comment"># mysql -p123456 -e &#x27;show variables like &quot;character%&quot;&#x27;</span></span><br><span class="line">mysql: [Warning] Using a password on the <span class="built_in">command</span> line interface can be insecure.</span><br><span class="line">+--------------------------+----------------------------+</span><br><span class="line">| Variable_name      	   | Value           			|</span><br><span class="line">+--------------------------+----------------------------+</span><br><span class="line">| character_set_client     | utf8            			|</span><br><span class="line">| character_set_connection | utf8            			|</span><br><span class="line">| character_set_database   | utf8            			|</span><br><span class="line">| character_set_filesystem | binary           			|</span><br><span class="line">| character_set_results    | utf8            			|</span><br><span class="line">| character_set_server     | utf8            			|</span><br><span class="line">| character_set_system     | utf8            			|</span><br><span class="line">| character_sets_dir       | /usr/share/mysql/charsets/ |</span><br><span class="line">+--------------------------+----------------------------+</span><br><span class="line"></span><br><span class="line"><span class="comment"># mysql -p123456 -e &#x27;show variables like &quot;collation%&quot;&#x27;             </span></span><br><span class="line">mysql: [Warning] Using a password on the <span class="built_in">command</span> line interface can be insecure.</span><br><span class="line">+----------------------+-----------------+</span><br><span class="line">| Variable_name    	   | Value      	 |</span><br><span class="line">+----------------------+-----------------+</span><br><span class="line">| collation_connection | utf8_general_ci |</span><br><span class="line">| collation_database   | utf8_general_ci |</span><br><span class="line">| collation_server     | utf8_general_ci |</span><br><span class="line">+----------------------+-----------------+</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat /var/lib/mysql/jumpserver/db.opt</span></span><br><span class="line">default-character-set=utf8</span><br><span class="line">default-collation=utf8_general_ci</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat /etc/mysql/mysql.conf.d/mysqld.cnf</span></span><br><span class="line">[mysqld]</span><br><span class="line">pid-file= /var/run/mysqld/mysqld.pid</span><br><span class="line">socket= /var/run/mysqld/mysqld.sock</span><br><span class="line">datadir= /var/lib/mysql</span><br><span class="line">symbolic-links=0</span><br><span class="line">character-set-server=utf8</span><br><span class="line"></span><br><span class="line"><span class="comment"># cat /etc/mysql/conf.d/mysql.cnf</span></span><br><span class="line">[mysql]</span><br><span class="line">default-character-set=utf8</span><br><span class="line"></span><br><span class="line"><span class="comment"># mysql -p123456 -e &#x27;select user,host from mysql.user&#x27;</span></span><br><span class="line">mysql: [Warning] Using a password on the <span class="built_in">command</span> line interface can be insecure.</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| user     	    | host   	|</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| jumpserver  	| %     	|</span><br><span class="line">| root     		| %     	|</span><br><span class="line">| mysql.session | localhost |</span><br><span class="line">| mysql.sys   	| localhost |</span><br><span class="line">| root     		| localhost |</span><br><span class="line">+---------------+-----------+</span><br><span class="line"></span><br><span class="line"><span class="comment"># mysql -p123456 -e &#x27;select user,host from mysql.user&#x27;</span></span><br><span class="line">mysql: [Warning] Using a password on the <span class="built_in">command</span> line interface can be insecure.</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| user     	    | host   	|</span><br><span class="line">+---------------+-----------+</span><br><span class="line">| jumpserver  	| %     	|</span><br><span class="line">| root     		| %     	|</span><br><span class="line">| mysql.session | localhost |</span><br><span class="line">| mysql.sys   	| localhost |</span><br><span class="line">| root     		| localhost |</span><br><span class="line">+---------------+-----------+</span><br><span class="line"></span><br><span class="line"><span class="comment"># ls /var/lib/mysql/ -l</span></span><br><span class="line">total 188484</span><br><span class="line">-rw-r----- 1 mysql mysql     	  56 Aug 16 08:43 auto.cnf</span><br><span class="line">-rw------- 1 mysql mysql   		1680 Aug 16 08:43 ca-key.pem</span><br><span class="line">-rw-r--r-- 1 mysql mysql   		1112 Aug 16 08:43 ca.pem</span><br><span class="line">-rw-r--r-- 1 mysql mysql   		1112 Aug 16 08:43 client-cert.pem</span><br><span class="line">-rw------- 1 mysql mysql   		1676 Aug 16 08:43 client-key.pem</span><br><span class="line">-rw-r----- 1 mysql mysql       	1346 Aug 16 08:43 ib_buffer_pool</span><br><span class="line">-rw-r----- 1 mysql mysql   	50331648 Aug 16 08:43 ib_logfile0</span><br><span class="line">-rw-r----- 1 mysql mysql   	50331648 Aug 16 08:43 ib_logfile1</span><br><span class="line">-rw-r----- 1 mysql mysql   	79691776 Aug 16 08:43 ibdata1</span><br><span class="line">-rw-r----- 1 mysql mysql   	12582912 Aug 16 08:43 ibtmp1</span><br><span class="line">drwxr-x--- 2 mysql mysql    	  20 Aug 16 08:43 jumpserver</span><br><span class="line">drwxr-x--- 2 mysql mysql   		4096 Aug 16 08:43 mysql</span><br><span class="line">drwxr-x--- 2 mysql mysql   		8192 Aug 16 08:43 performance_schema</span><br><span class="line">-rw------- 1 mysql mysql   		1676 Aug 16 08:43 private_key.pem</span><br><span class="line">-rw-r--r-- 1 mysql mysql    	 452 Aug 16 08:43 public_key.pem</span><br><span class="line">-rw-r--r-- 1 mysql mysql   		1112 Aug 16 08:43 server-cert.pem</span><br><span class="line">-rw------- 1 mysql mysql   		1676 Aug 16 08:43 server-key.pem</span><br><span class="line">drwxr-x--- 2 mysql mysql   		8192 Aug 16 08:43 sys</span><br><span class="line"></span><br><span class="line"><span class="comment">#或者执行下面</span></span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql mysql -p123456 -e <span class="string">&#x27;show variables like &quot;character%&quot;&#x27;</span></span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql mysql -p123456 -e <span class="string">&#x27;show variables like &quot;collation%&quot;&#x27;</span></span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql <span class="built_in">cat</span> /var/lib/mysql/jumpserver/db.opt</span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql <span class="built_in">cat</span> /etc/mysql/conf.d/mysql.cnf</span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql mysql -p123456 -e <span class="string">&#x27;select user,host from mysql.user&#x27;</span></span><br><span class="line">[root@ubuntu2004 ~]#docker <span class="built_in">exec</span> mysql <span class="built_in">ls</span> /var/lib/mysql/ -l</span><br><span class="line"></span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">ls</span> /data/mysql/</span><br><span class="line">auto.cnf   client-cert.pem ibdata1     ibtmp1     performance_schema server-cert.pem</span><br><span class="line">ca-key.pem client-key.pem  ib_logfile0 jumpserver private_key.pem    server-key.pem</span><br><span class="line">ca.pem     ib_buffer_pool  ib_logfile1 mysql      public_key.pem     sys</span><br><span class="line"></span><br><span class="line"><span class="comment">#测试连接MySQL</span></span><br><span class="line">[root@ubuntu2004 ~]#yum -y install mysql</span><br><span class="line">[root@ubuntu2004 ~]#mysql -ujumpserver -p123456 -h10.0.0.8</span><br><span class="line">MySQL [(none)]&gt; show databases;</span><br><span class="line">+--------------------+</span><br><span class="line">| Database      	 |</span><br><span class="line">+--------------------+</span><br><span class="line">| information_schema |</span><br><span class="line">| jumpserver     	 |</span><br><span class="line">+--------------------+</span><br><span class="line">2 rows <span class="keyword">in</span> <span class="built_in">set</span> (0.00 sec)</span><br><span class="line"></span><br><span class="line">MySQL [(none)]&gt; use jumpserver</span><br><span class="line">Database changed</span><br><span class="line"></span><br><span class="line">MySQL [jumpserver]&gt; show tables;</span><br><span class="line">Empty <span class="built_in">set</span> (0.00 sec)</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-4-安装-Redis-服务"><a href="#2-3-4-安装-Redis-服务" class="headerlink" title="2.3.4 安装 Redis 服务"></a>2.3.4 安装 Redis 服务</h3><p>官方说明</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://docs.jumpserver.org/zh/master/install/prod/distributed_04/</span><br></pre></td></tr></table></figure>
+
+<p>新版要求:</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">外置 Redis 要求 Redis 版本大于等于 6.0</span><br><span class="line">注意:不支持redis7.0</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-4-1-启动-Redis"><a href="#2-3-4-1-启动-Redis" class="headerlink" title="2.3.4.1 启动 Redis"></a>2.3.4.1 启动 Redis</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#docker run -d -p 6379:6379 --name redis --restart always redis:6.2.7</span><br><span class="line">2b75e77aa35b79dcb0e4cffb41d124c10124cdfda959e3131f7927e8808f9417</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-4-2-验证-Redis连接"><a href="#2-3-4-2-验证-Redis连接" class="headerlink" title="2.3.4.2 验证 Redis连接"></a>2.3.4.2 验证 Redis连接</h4><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#yum -y install redis</span><br><span class="line">[root@ubuntu2004 ~]#redis-cli -h 10.0.0.8</span><br><span class="line">10.0.0.8:6379&gt; info</span><br><span class="line"><span class="comment"># Server</span></span><br><span class="line">redis_version:5.0.9</span><br><span class="line">redis_git_sha1:00000000</span><br><span class="line">redis_git_dirty:0</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-5-部署-JumpServer"><a href="#2-3-5-部署-JumpServer" class="headerlink" title="2.3.5 部署 JumpServer"></a>2.3.5 部署 JumpServer</h3><h4 id="2-3-5-1-生成-key-和-token"><a href="#2-3-5-1-生成-key-和-token" class="headerlink" title="2.3.5.1 生成 key 和 token"></a>2.3.5.1 生成 key 和 token</h4><p>参考官方说明:</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/jumpserver/Dockerfile/tree/master/allinone</span><br><span class="line">https://docs.jumpserver.org/zh/master/install/docker_install/</span><br></pre></td></tr></table></figure>
+
+<p><strong>需要先生成 key 和 token</strong></p>
+<p><img src="/Middleware/JumpServer/image-20240418231117223.png" alt="image-20240418231117223"></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#<span class="built_in">cat</span> key.sh</span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="keyword">if</span> [ ! <span class="string">&quot;<span class="variable">$SECRET_KEY</span>&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line"> 	SECRET_KEY=`<span class="built_in">cat</span> /dev/urandom | <span class="built_in">tr</span> -dc A-Za-z0-9 | <span class="built_in">head</span> -c 50`;</span><br><span class="line"> 	<span class="built_in">echo</span> <span class="string">&quot;SECRET_KEY=<span class="variable">$SECRET_KEY</span>&quot;</span> &gt;&gt; ~/.bashrc;</span><br><span class="line"> 	<span class="built_in">echo</span> SECRET_KEY=<span class="variable">$SECRET_KEY</span>;</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line"> 	<span class="built_in">echo</span> SECRET_KEY=<span class="variable">$SECRET_KEY</span>;</span><br><span class="line"><span class="keyword">fi</span> </span><br><span class="line"><span class="keyword">if</span> [ ! <span class="string">&quot;<span class="variable">$BOOTSTRAP_TOKEN</span>&quot;</span> ]; <span class="keyword">then</span></span><br><span class="line"> 	BOOTSTRAP_TOKEN=`<span class="built_in">cat</span> /dev/urandom | <span class="built_in">tr</span> -dc A-Za-z0-9 | <span class="built_in">head</span> -c 16`;</span><br><span class="line"> 	<span class="built_in">echo</span> <span class="string">&quot;BOOTSTRAP_TOKEN=<span class="variable">$BOOTSTRAP_TOKEN</span>&quot;</span> &gt;&gt; ~/.bashrc;</span><br><span class="line"> 	<span class="built_in">echo</span> BOOTSTRAP_TOKEN=<span class="variable">$BOOTSTRAP_TOKEN</span>;</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line"> 	<span class="built_in">echo</span> BOOTSTRAP_TOKEN=<span class="variable">$BOOTSTRAP_TOKEN</span>;</span><br><span class="line"><span class="keyword">fi</span></span><br><span class="line"></span><br><span class="line">[root@ubuntu2004 ~]#bash key.sh</span><br><span class="line">[root@ubuntu2004 ~]#<span class="built_in">tail</span> -n2 .bashrc</span><br><span class="line">SECRET_KEY=9RTRBg3AjHjvUUNCUpHUH5LirSFazRozk1UyOQcoKkwMExeUEm</span><br><span class="line">BOOTSTRAP_TOKEN=1OlaSdCoUpSQPjH6</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-5-2-运行容器"><a href="#2-3-5-2-运行容器" class="headerlink" title="2.3.5.2 运行容器"></a>2.3.5.2 运行容器</h4><p>范例：JumpServer v2.28.7 版</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">docker run --name jms_all -d \</span><br><span class="line"> -v /opt/jumpserver/core/data:/opt/jumpserver/data \</span><br><span class="line"> -v /opt/jumpserver/koko/data:/opt/koko/data \</span><br><span class="line"> -v /opt/jumpserver/lion/data:/opt/lion/data \</span><br><span class="line"> -p 80:80 \</span><br><span class="line"> -p 2222:2222 \</span><br><span class="line"> -e SECRET_KEY=vGeWBRADIPl7YYus0SsON7aI15TUW1dJ1rSskvizc3YgRr7hOL \</span><br><span class="line"> -e BOOTSTRAP_TOKEN=OdY0kincspHW3bXt \</span><br><span class="line"> -e LOG_LEVEL=ERROR \</span><br><span class="line"> -e DB_HOST=10.0.0.200 \   		<span class="comment">#不支持127.0.0.1</span></span><br><span class="line"> -e DB_PORT=3306 \</span><br><span class="line"> -e DB_USER=jumpserver \</span><br><span class="line"> -e DB_PASSWORD=123456 \</span><br><span class="line"> -e DB_NAME=jumpserver \</span><br><span class="line"> -e REDIS_HOST=10.0.0.200 \  	<span class="comment">#不支持127.0.0.1</span></span><br><span class="line"> -e REDIS_PORT=6379 \</span><br><span class="line"> -e REDIS_PASSWORD=<span class="string">&#x27;&#x27;</span> \</span><br><span class="line"> --privileged=<span class="literal">true</span> \</span><br><span class="line"> jumpserver/jms_all:v2.28.7</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-5-3-验证是否成功"><a href="#2-3-5-3-验证是否成功" class="headerlink" title="2.3.5.3 验证是否成功"></a>2.3.5.3 验证是否成功</h4><h5 id="2-3-5-3-1-查看日志"><a href="#2-3-5-3-1-查看日志" class="headerlink" title="2.3.5.3.1 查看日志"></a>2.3.5.3.1 查看日志</h5><p>范例：查看jumpserver 2.28.7日志确认成功</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#以下错误提示不影响使用</span></span><br><span class="line">[root@ubuntu2204 ~]#docker logs -f jms_all</span><br><span class="line">.....</span><br><span class="line">Applying users.0039_auto_20211229_1852...2023-03-10 16:00:14 [ERRO] Post <span class="string">&quot;http://127.0.0.1:8080/api/v1/terminal/terminal-registrations/&quot;</span>: dial tcp 127.0.0.1:8080: connect: connection refused </span><br><span class="line">2023-03-10 16:00:14 main main.go [ERROR] Post</span><br><span class="line"><span class="string">&quot;http://127.0.0.1:8080/api/v1/terminal/terminal-registrations/&quot;</span>: dial tcp 127.0.0.1:8080: connect: connection refused</span><br><span class="line">2023-03-10 16:00:14 [ERRO] Post <span class="string">&quot;http://127.0.0.1:8080/api/v1/terminal/terminal-registrations/&quot;</span>: dial tcp 127.0.0.1:8080: connect: connection refused OK</span><br><span class="line">Applying users.0040_alter_user_source... OK</span><br><span class="line">After migration, update <span class="built_in">builtin</span> role permissions</span><br><span class="line">2023-03-10 16:00:15 Fri Mar 10 16:00:15 2023</span><br><span class="line">2023-03-10 16:00:15 JumpServer version v2.28.7, more see https://www.jumpserver.org</span><br><span class="line">Lion Version v2.28.7, more see https://www.jumpserver.org</span><br><span class="line">2023-03-10 16:00:30 KoKo Version v2.28.7, more see https://www.jumpserver.org Quit the server with CONTROL-C.</span><br></pre></td></tr></table></figure>
+
+<h5 id="2-3-5-3-2-查看-MySQL-中生成相关表"><a href="#2-3-5-3-2-查看-MySQL-中生成相关表" class="headerlink" title="2.3.5.3.2 查看 MySQL 中生成相关表"></a>2.3.5.3.2 查看 MySQL 中生成相关表</h5><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#docker exec -it mysql sh</span><br><span class="line"># mysql -ujumpserver -p123456 jumperserver</span><br><span class="line">mysql&gt; show tables;</span><br><span class="line">+----------------------------------------------+</span><br><span class="line">| Tables_in_jumpserver             			   |</span><br><span class="line">+----------------------------------------------+</span><br><span class="line">| applications_databaseapp           		   |</span><br><span class="line">| applications_remoteapp            		   |</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+
+<h5 id="2-3-5-3-3-查看端口"><a href="#2-3-5-3-3-查看端口" class="headerlink" title="2.3.5.3.3 查看端口"></a>2.3.5.3.3 查看端口</h5><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#ss -ntl</span><br><span class="line">State   Recv-Q Send-Q    Local Address:Port  Peer Address:Port     </span><br><span class="line">LISTEN  0      128       0.0.0.0:22          0.0.0.0:*       </span><br><span class="line">LISTEN  0      100       127.0.0.1:25        0.0.0.0:*       </span><br><span class="line">LISTEN  0      128          *:2222           *:*       </span><br><span class="line">LISTEN  0      128          *:80             *:*       </span><br><span class="line">LISTEN  0      128        [::]:22            [::]:*       </span><br><span class="line">LISTEN  0      100        [::1]:25           [::]:* </span><br></pre></td></tr></table></figure>
+
+<h5 id="2-3-5-3-4-验证登录"><a href="#2-3-5-3-4-验证登录" class="headerlink" title="2.3.5.3.4 验证登录"></a>2.3.5.3.4 验证登录</h5><p><img src="/Middleware/JumpServer/image-20240418232011244.png" alt="image-20240418232011244"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232005511.png" alt="image-20240418232005511"></p>
+<h2 id="2-4-一键脚本安装"><a href="#2-4-一键脚本安装" class="headerlink" title="2.4 一键脚本安装"></a>2.4 一键脚本安装</h2><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://docs.jumpserver.org/zh/v4/installation/setup_linux_standalone/online_install/</span><br></pre></td></tr></table></figure>
+
+<p>范例：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2204 ~]#curl -sSL https://github.com/jumpserver/jumpserver/releases/latest/download/quick_start.sh | bash</span><br><span class="line">......</span><br><span class="line">&gt;&gt;&gt; 安装完成了</span><br><span class="line"></span><br><span class="line">1. 可以使用如下命令启动, 然后访问</span><br><span class="line"><span class="built_in">cd</span> /opt/jumpserver-installer-v3.0.4</span><br><span class="line">./jmsctl.sh start</span><br><span class="line"></span><br><span class="line">2. 其它一些管理命令</span><br><span class="line">./jmsctl.sh stop</span><br><span class="line">./jmsctl.sh restart</span><br><span class="line">./jmsctl.sh backup</span><br><span class="line">./jmsctl.sh upgrade</span><br><span class="line">更多还有一些命令, 你可以 ./jmsctl.sh --<span class="built_in">help</span> 来了解</span><br><span class="line"></span><br><span class="line">3. Web 访问</span><br><span class="line">http://192.168.250.1:80</span><br><span class="line">默认用户: admin 默认密码: admin</span><br><span class="line"></span><br><span class="line">4. SSH/SFTP 访问</span><br><span class="line">ssh -p2222 admin@192.168.250.1</span><br><span class="line">sftp -P2222 admin@192.168.250.1</span><br><span class="line"></span><br><span class="line">5. 更多信息</span><br><span class="line">我们的官网: https://www.jumpserver.org/</span><br><span class="line">我们的文档: https://docs.jumpserver.org/</span><br><span class="line"><span class="comment">#安装完成后，直接访问即可，默认用户名和密码是admin/admin</span></span><br><span class="line">http://jumpserver_ip/</span><br></pre></td></tr></table></figure>
+
+<h1 id="3-JumpServer-常见功能"><a href="#3-JumpServer-常见功能" class="headerlink" title="3 JumpServer 常见功能"></a>3 JumpServer 常见功能</h1><p>官方文档：<a target="_blank" rel="noopener" href="https://docs.jumpserver.org/zh/master/">https://docs.jumpserver.org/zh/master/</a></p>
+<h2 id="3-1-登录并初始化配置"><a href="#3-1-登录并初始化配置" class="headerlink" title="3.1 登录并初始化配置"></a>3.1 登录并初始化配置</h2><h3 id="3-1-1-首次登录"><a href="#3-1-1-首次登录" class="headerlink" title="3.1.1 首次登录"></a>3.1.1 首次登录</h3><h4 id="3-1-1-1-浏览器访问"><a href="#3-1-1-1-浏览器访问" class="headerlink" title="3.1.1.1 浏览器访问"></a>3.1.1.1 浏览器访问</h4><figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">http:&lt;JumpServerIP&gt;</span><br></pre></td></tr></table></figure>
+
+<p>登录 JumpServer 默认用户: admin 密码: admin</p>
+<p>第一次登录要求重置密码</p>
+<p>用新密码重新登录</p>
+<p><img src="/Middleware/JumpServer/image-20240418232238962.png" alt="image-20240418232238962"></p>
+<h4 id="3-1-1-2-ssh-登录"><a href="#3-1-1-2-ssh-登录" class="headerlink" title="3.1.1.2 ssh 登录"></a>3.1.1.2 ssh 登录</h4><p>可以用admin用户和修改过的新密码, 连接jumpserver的ssh端口2222&#x2F;tcp进行连接访问</p>
+<p>注意:新版需要实现资产授权后才能连接登录</p>
+<p><img src="/Middleware/JumpServer/image-20240418232258790.png" alt="image-20240418232258790"></p>
+<h3 id="3-1-2-修改-admin-用户的密码"><a href="#3-1-2-修改-admin-用户的密码" class="headerlink" title="3.1.2 修改 admin 用户的密码"></a>3.1.2 修改 admin 用户的密码</h3><p><img src="/Middleware/JumpServer/image-20240418232312220.png" alt="image-20240418232312220"></p>
+<h3 id="3-1-3-配置邮件"><a href="#3-1-3-配置邮件" class="headerlink" title="3.1.3 配置邮件"></a>3.1.3 配置邮件</h3><p><img src="/Middleware/JumpServer/image-20240418232321466.png" alt="image-20240418232321466"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232326220.png" alt="image-20240418232326220"></p>
+<p>测试连接,可以收到邮件</p>
+<p><img src="/Middleware/JumpServer/image-20240418232335047.png" alt="image-20240418232335047"></p>
+<h2 id="3-2-创建JumpServer用户和组"><a href="#3-2-创建JumpServer用户和组" class="headerlink" title="3.2 创建JumpServer用户和组"></a>3.2 创建JumpServer用户和组</h2><p>JumpServer 支持三种登录用户</p>
+<ul>
+<li>系统管理员</li>
+<li>普通用户</li>
+<li>系统审计员</li>
+</ul>
+<h3 id="3-2-1-创建用户"><a href="#3-2-1-创建用户" class="headerlink" title="3.2.1 创建用户"></a>3.2.1 创建用户</h3><p><img src="/Middleware/JumpServer/image-20240418232352321.png" alt="image-20240418232352321"></p>
+<p>填写用户信息，注意: 邮箱地址不能重复</p>
+<p><img src="/Middleware/JumpServer/image-20240418232401300.png" alt="image-20240418232401300"></p>
+<p>相同方法再创建xiaoming用户</p>
+<p><img src="/Middleware/JumpServer/image-20240418232410226.png" alt="image-20240418232410226"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232414844.png" alt="image-20240418232414844"></p>
+<h3 id="3-2-2-创建组并将用户加入组中"><a href="#3-2-2-创建组并将用户加入组中" class="headerlink" title="3.2.2 创建组并将用户加入组中"></a>3.2.2 创建组并将用户加入组中</h3><p><img src="/Middleware/JumpServer/image-20240418232424189.png" alt="image-20240418232424189"></p>
+<p>创建development组,并将前面创建的用户加入组中</p>
+<p><img src="/Middleware/JumpServer/image-20240418232433403.png" alt="image-20240418232433403"></p>
+<p>创建test组,将入用户</p>
+<p><img src="/Middleware/JumpServer/image-20240418232441217.png" alt="image-20240418232441217"></p>
+<p>查看创建的组</p>
+<p><img src="/Middleware/JumpServer/image-20240418232448631.png" alt="image-20240418232448631"></p>
+<h3 id="3-2-3-使用新用户登录"><a href="#3-2-3-使用新用户登录" class="headerlink" title="3.2.3 使用新用户登录"></a>3.2.3 使用新用户登录</h3><p><img src="/Middleware/JumpServer/image-20240418232504215.png" alt="image-20240418232504215"></p>
+<p>首次登录完善个人信息</p>
+<p><img src="/Middleware/JumpServer/image-20240418232511958.png" alt="image-20240418232511958"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232516244.png" alt="image-20240418232516244"></p>
+<h3 id="3-2-4-禁用和启用用户"><a href="#3-2-4-禁用和启用用户" class="headerlink" title="3.2.4 禁用和启用用户"></a>3.2.4 禁用和启用用户</h3><p><strong>禁用用户</strong></p>
+<p><img src="/Middleware/JumpServer/image-20240418232526480.png" alt="image-20240418232526480"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232530295.png" alt="image-20240418232530295"></p>
+<p><strong>启用用户</strong></p>
+<p><img src="/Middleware/JumpServer/image-20240418232539608.png" alt="image-20240418232539608"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232543420.png" alt="image-20240418232543420"></p>
+<h3 id="3-2-5-启用用户多因子认证功能"><a href="#3-2-5-启用用户多因子认证功能" class="headerlink" title="3.2.5 启用用户多因子认证功能"></a>3.2.5 启用用户多因子认证功能</h3><p>多因子认证Multi-Factor Authentication (MFA) 是一种简单有效的最佳安全实践方法，用户要通过两种以上的认证机制之后，才能得到授权，使用计算机资源</p>
+<p>JumpServer 启用 MFA 后，用户登录网站时，系统将要求输入用户名和密码（第一安全要素），然后要求输入来自其 MFA 设备的动态验证码（第二安全要素），双因素的安全认证将为您的账户提供更高的安全保护</p>
+<h4 id="3-2-5-1-开启MFA"><a href="#3-2-5-1-开启MFA" class="headerlink" title="3.2.5.1 开启MFA"></a>3.2.5.1 开启MFA</h4><p>在用户列表中,对指定用户更新配置</p>
+<p><img src="/Middleware/JumpServer/image-20240418232607657.png" alt="image-20240418232607657"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232611986.png" alt="image-20240418232611986"></p>
+<h4 id="3-2-5-2-绑定手机APP"><a href="#3-2-5-2-绑定手机APP" class="headerlink" title="3.2.5.2 绑定手机APP"></a>3.2.5.2 绑定手机APP</h4><p><img src="/Middleware/JumpServer/image-20240418232632208.png" alt="image-20240418232632208"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232636159.png" alt="image-20240418232636159"></p>
+<p>按下图下载APP并安装</p>
+<p><img src="/Middleware/JumpServer/image-20240418232644175.png" alt="image-20240418232644175"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232648165.png" alt="image-20240418232648165"></p>
+<h4 id="3-2-5-3-重新登录验证"><a href="#3-2-5-3-重新登录验证" class="headerlink" title="3.2.5.3 重新登录验证"></a>3.2.5.3 重新登录验证</h4><p><img src="/Middleware/JumpServer/image-20240418232656936.png" alt="image-20240418232656936"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232700584.png" alt="image-20240418232700584"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232705271.png" alt="image-20240418232705271"></p>
+<h3 id="3-2-6-创建系统审计员"><a href="#3-2-6-创建系统审计员" class="headerlink" title="3.2.6 创建系统审计员"></a>3.2.6 创建系统审计员</h3><p>系统审计员即查看录像带的人</p>
+<p><img src="/Middleware/JumpServer/image-20240418232719869.png" alt="image-20240418232719869"></p>
+<p>使用审计员用户登录</p>
+<p><img src="/Middleware/JumpServer/image-20240418232728479.png" alt="image-20240418232728479"></p>
+<h2 id="3-3-管理资产"><a href="#3-3-管理资产" class="headerlink" title="3.3 管理资产"></a>3.3 管理资产</h2><p>JumpServer 可以管理各种类型的资产</p>
+<p><img src="/Middleware/JumpServer/image-20240418232743295.png" alt="image-20240418232743295"></p>
+<p>JumpServer中的三种用户</p>
+<ul>
+<li><p>登录用户:</p>
+<p>  分配给用户用于登录JumpServer时使用</p>
+</li>
+<li><p>系统用户中的特权用户(管理用户):</p>
+<p>  对后端服务器具有管理权限的系统帐号 root或administrator 及sudo ALL权限的用户,用于管理后端服务器</p>
+<p>  新版中已取消此名称,改名为<strong>系统用户中特权用户</strong></p>
+</li>
+<li><p>系统用户中的普通用户(系统用户):</p>
+<p>  给登录用户使用ssh连接后端服务器时对应的系统用户 ,一般是后端服务器的普通的系统用户帐号</p>
+<p>  新版中改名为<strong>系统用户中普通用户</strong></p>
+</li>
+</ul>
+<p>根据 1.3 架构图，比如有个开发人员小明，小明登录jumpserve的账号就是登录用户，通过jumpserver去连接后端服务器就是系统用户，后端服务器的系统用户账号可以先创建管理用户，后续创建完资产，授权等操作后，会通过管理用户自动使用ansible批量创建</p>
+<h3 id="3-3-1-创建管理用户-系统用户中特权用户"><a href="#3-3-1-创建管理用户-系统用户中特权用户" class="headerlink" title="3.3.1 创建管理用户(系统用户中特权用户)"></a>3.3.1 创建管理用户(系统用户中特权用户)</h3><p>管理用户是jumpServer用来管理后端服务器或其它资产的管理员用户,此用户必须对后端服务器有管理权限</p>
+<p>管理用户特点:</p>
+<ul>
+<li>通常是后端服务器的root或者是具备root权限的超级用户</li>
+<li>用于推送或者是创建系统用户</li>
+<li>用于获取被管理的硬件资产信息</li>
+</ul>
+<p>新版</p>
+<p><img src="/Middleware/JumpServer/image-20240418232907655.png" alt="image-20240418232907655"></p>
+<p>旧版</p>
+<p><img src="/Middleware/JumpServer/image-20240418232916469.png" alt="image-20240418232916469"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232920979.png" alt="image-20240418232920979"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232925709.png" alt="image-20240418232925709"></p>
+<h3 id="3-3-2-创建资产"><a href="#3-3-2-创建资产" class="headerlink" title="3.3.2 创建资产"></a>3.3.2 创建资产</h3><p>创建可以被jumpServer用户访问的后端服务器和其它资产,比如:路由器,交换机等</p>
+<h4 id="3-3-2-1-创建资产"><a href="#3-3-2-1-创建资产" class="headerlink" title="3.3.2.1 创建资产"></a>3.3.2.1 创建资产</h4><p><img src="/Middleware/JumpServer/image-20240418232936954.png" alt="image-20240418232936954"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232941276.png" alt="image-20240418232941276"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232946599.png" alt="image-20240418232946599"></p>
+<p><img src="/Middleware/JumpServer/image-20240418232951202.png" alt="image-20240418232951202"></p>
+<p>创建多个资产</p>
+<p><img src="/Middleware/JumpServer/image-20240418232959157.png" alt="image-20240418232959157"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233003652.png" alt="image-20240418233003652"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233008090.png" alt="image-20240418233008090"></p>
+<h4 id="3-3-2-2-创建节点实现资产分类"><a href="#3-3-2-2-创建节点实现资产分类" class="headerlink" title="3.3.2.2 创建节点实现资产分类"></a>3.3.2.2 创建节点实现资产分类</h4><p>创建节点将资产分类</p>
+<p><img src="/Middleware/JumpServer/image-20240418233019642.png" alt="image-20240418233019642"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233023948.png" alt="image-20240418233023948"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233028718.png" alt="image-20240418233028718"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233033408.png" alt="image-20240418233033408"></p>
+<h2 id="3-4-授权管理"><a href="#3-4-授权管理" class="headerlink" title="3.4 授权管理"></a>3.4 授权管理</h2><p><img src="/Middleware/JumpServer/image-20240418233045697.png" alt="image-20240418233045697"></p>
+<h3 id="3-4-1-创建系统用户-系统用户中普通用户"><a href="#3-4-1-创建系统用户-系统用户中普通用户" class="headerlink" title="3.4.1 创建系统用户(系统用户中普通用户)"></a>3.4.1 创建系统用户(系统用户中普通用户)</h3><p>系统用户是分配给JumpServer用户,用来让JumpServer用户在连接后端服务器和其它资产,一般不会给管理权限</p>
+<p>生产环境中,一般都会利用自动化运维工具提前在后端服务器创建好系统用户,在所有后端服务器统一用户ID信息,而非在jumpserver中创建</p>
+<p>新版界面</p>
+<p><img src="/Middleware/JumpServer/image-20240418233114836.png" alt="image-20240418233114836"></p>
+<p>旧版</p>
+<p><img src="/Middleware/JumpServer/image-20240418233126656.png" alt="image-20240418233126656"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233131041.png" alt="image-20240418233131041"></p>
+<p>旧版界面</p>
+<p><img src="/Middleware/JumpServer/image-20240418233139656.png" alt="image-20240418233139656"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233143418.png" alt="image-20240418233143418"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233148281.png" alt="image-20240418233148281"></p>
+<h3 id="3-4-2-关联使用系统用户的资产"><a href="#3-4-2-关联使用系统用户的资产" class="headerlink" title="3.4.2 关联使用系统用户的资产"></a>3.4.2 关联使用系统用户的资产</h3><p>将前面创建的系统用户推送到后端服务器并自动创建</p>
+<p>在系统用户中添加使用此用户的资产</p>
+<p><img src="/Middleware/JumpServer/image-20240418233205529.png" alt="image-20240418233205529"></p>
+<p>选择使用此系统用户的主机</p>
+<p><img src="/Middleware/JumpServer/image-20240418233214124.png" alt="image-20240418233214124"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233218570.png" alt="image-20240418233218570"></p>
+<p>测试可连接性</p>
+<p>注意:连接性是利用系统用户进行连接的,所以之前必须先推送系统用户后才能测试连接</p>
+<p><img src="/Middleware/JumpServer/image-20240418233229391.png" alt="image-20240418233229391"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233233326.png" alt="image-20240418233233326"></p>
+<p>如果前面系统用户是自动推送,则无需推送系统用户,就可以在后端服务器自动创建用户</p>
+<p><img src="/Middleware/JumpServer/image-20240418233242974.png" alt="image-20240418233242974"></p>
+<p>在后端服务器验证用户创建成功</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu1804 ~]#<span class="built_in">id</span> magedu</span><br><span class="line">uid=1001(magedu) gid=1001(magedu) <span class="built_in">groups</span>=1001(magedu)</span><br><span class="line">[root@centos7 ~]#<span class="built_in">id</span> magedu</span><br><span class="line">uid=1002(magedu) gid=1002(magedu) <span class="built_in">groups</span>=1002(magedu)</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="3-4-3-创建授权规则"><a href="#3-4-3-创建授权规则" class="headerlink" title="3.4.3 创建授权规则"></a>3.4.3 创建授权规则</h3><p>通过授权规则, 为JumpServer用户分配可以访问的资产及使用的系统用户</p>
+<p>新版</p>
+<p><img src="/Middleware/JumpServer/image-20240418233305851.png" alt="image-20240418233305851"></p>
+<p>旧版</p>
+<p><img src="/Middleware/JumpServer/image-20240418233314204.png" alt="image-20240418233314204"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233318613.png" alt="image-20240418233318613"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233323390.png" alt="image-20240418233323390"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233327953.png" alt="image-20240418233327953"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233332238.png" alt="image-20240418233332238"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233336335.png" alt="image-20240418233336335"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233341188.png" alt="image-20240418233341188"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233345480.png" alt="image-20240418233345480"></p>
+<p>同样再创建授权规则</p>
+<p><img src="/Middleware/JumpServer/image-20240418233354243.png" alt="image-20240418233354243"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233358182.png" alt="image-20240418233358182"></p>
+<h3 id="3-4-4-测试登录访问后端服务器"><a href="#3-4-4-测试登录访问后端服务器" class="headerlink" title="3.4.4 测试登录访问后端服务器"></a>3.4.4 测试登录访问后端服务器</h3><p><img src="/Middleware/JumpServer/image-20240418233424162.png" alt="image-20240418233424162"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233414660.png" alt="image-20240418233414660"></p>
+<p>选中主机后,输入命令,再执行</p>
+<p><img src="/Middleware/JumpServer/image-20240418233428505.png" alt="image-20240418233428505"></p>
+<p>点右上角的web终端,可以打开终端界面</p>
+<p><img src="/Middleware/JumpServer/image-20240418233436350.png" alt="image-20240418233436350"></p>
+<h3 id="3-4-5-测试上传和下载文件"><a href="#3-4-5-测试上传和下载文件" class="headerlink" title="3.4.5 测试上传和下载文件"></a>3.4.5 测试上传和下载文件</h3><p>可以通过web方式或者通过filezilla等工具直接连接jumpserver的2222端口都可以实现文件的上传下载，存放在了&#x2F;tmp</p>
+<p><img src="/Middleware/JumpServer/image-20240418233446770.png" alt="image-20240418233446770"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233450047.png" alt="image-20240418233450047"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233453739.png" alt="image-20240418233453739"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233457586.png" alt="image-20240418233457586"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233502322.png" alt="image-20240418233502322"></p>
+<p><img src="/Middleware/JumpServer/image-20240418233506073.png" alt="image-20240418233506073"></p>
+<h3 id="3-4-6-ssh连接JumpServer"><a href="#3-4-6-ssh连接JumpServer" class="headerlink" title="3.4.6 ssh连接JumpServer"></a>3.4.6 ssh连接JumpServer</h3><p>JumpServer 还支持用户通过ssh连接其2222&#x2F;tcp端口进行访问</p>
+<p>连接方式</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -p 2222 user@jumpserver</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Middleware/JumpServer/image-20240418233526410.png" alt="image-20240418233526410"></p>
+<h2 id="3-5-数据库授权"><a href="#3-5-数据库授权" class="headerlink" title="3.5 数据库授权"></a>3.5 数据库授权</h2><p>注意: JumpServer v2.5 此功能有Bug ,可以选择 V2.4版</p>
+<h3 id="3-5-1-在后端服务器安装MySQL并创建数据库和用户"><a href="#3-5-1-在后端服务器安装MySQL并创建数据库和用户" class="headerlink" title="3.5.1 在后端服务器安装MySQL并创建数据库和用户"></a>3.5.1 在后端服务器安装MySQL并创建数据库和用户</h3><p>范例：Ubuntu</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2204 ~]#apt -y install mysql-server</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]#vim /etc/mysql/mysql.conf.d/mysqld.cnf</span><br><span class="line">#bind-address      = 127.0.0.1</span><br><span class="line">#mysqlx-bind-address  = 127.0.0.1</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]#sed -i &#x27;/127.0.0.1/s/^/#/&#x27; /etc/mysql/mysql.conf.d/mysqld.cnf</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]#systemctl restart mysql</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]#mysql</span><br><span class="line">mysql&gt; create database wordpress;</span><br><span class="line">mysql&gt; create user wordpress@&#x27;10.0.0.%&#x27; identified by &#x27;123456&#x27;;</span><br><span class="line">mysql&gt; grant all on wordpress.* to wordpress@&#x27;10.0.0.%&#x27;&#x27; ;</span><br></pre></td></tr></table></figure>
+
+<p>范例：红帽系统</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#hostname -I</span><br><span class="line">10.0.0.200</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#dnf -y install mariadb-server</span><br><span class="line">[root@centos8 ~]#systemctl enable --now mariadb</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#mysql</span><br><span class="line">MariaDB [(none)]&gt; create database wordpress;</span><br><span class="line">MariaDB [(none)]&gt; create user wordpress@&#x27;10.0.0.%&#x27; identified by &#x27;123456&#x27;;</span><br><span class="line">MariaDB [(none)]&gt; grant all on wordpress.* to wordpress@&#x27;10.0.0.%&#x27; ;</span><br><span class="line">MariaDB [(none)]&gt; exit</span><br><span class="line">Bye</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="3-5-2-创建数据库应用"><a href="#3-5-2-创建数据库应用" class="headerlink" title="3.5.2 创建数据库应用"></a>3.5.2 创建数据库应用</h3><p>新版：资产管理–资产列表–数据库–创建</p>
+<p>旧版：应用管理–数据库–创建</p>
+<p><img src="/Middleware/JumpServer/image-20240421174809521.png" alt="image-20240421174809521"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174814173.png" alt="image-20240421174814173"></p>
+<h3 id="3-5-3-创建数据库的系统用户"><a href="#3-5-3-创建数据库的系统用户" class="headerlink" title="3.5.3 创建数据库的系统用户"></a>3.5.3 创建数据库的系统用户</h3><p>创建针对数据库的专用系统用户</p>
+<p><strong>注意: 协议选择mysql</strong></p>
+<p><img src="/Middleware/JumpServer/image-20240421174832572.png" alt="image-20240421174832572"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174837978.png" alt="image-20240421174837978"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174842675.png" alt="image-20240421174842675"></p>
+<h3 id="3-5-4-创建数据库授权规则"><a href="#3-5-4-创建数据库授权规则" class="headerlink" title="3.5.4 创建数据库授权规则"></a>3.5.4 创建数据库授权规则</h3><p>权限管理–应用授权</p>
+<p><img src="/Middleware/JumpServer/image-20240421174856118.png" alt="image-20240421174856118"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174900869.png" alt="image-20240421174900869"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174905514.png" alt="image-20240421174905514"></p>
+<h3 id="3-5-5-测试数据库连接"><a href="#3-5-5-测试数据库连接" class="headerlink" title="3.5.5 测试数据库连接"></a>3.5.5 测试数据库连接</h3><h4 id="3-5-5-1-web-方式连接MySQL资产"><a href="#3-5-5-1-web-方式连接MySQL资产" class="headerlink" title="3.5.5.1 web 方式连接MySQL资产"></a>3.5.5.1 web 方式连接MySQL资产</h4><p><img src="/Middleware/JumpServer/image-20240421174918307.png" alt="image-20240421174918307"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174921872.png" alt="image-20240421174921872"></p>
+<p>注意: v2.5.3有 bug,无法连接</p>
+<p><img src="/Middleware/JumpServer/image-20240421174930990.png" alt="image-20240421174930990"></p>
+<h4 id="3-5-5-2-用ssh连接MySQL资产"><a href="#3-5-5-2-用ssh连接MySQL资产" class="headerlink" title="3.5.5.2 用ssh连接MySQL资产"></a>3.5.5.2 用ssh连接MySQL资产</h4><p><img src="/Middleware/JumpServer/image-20240421174941351.png" alt="image-20240421174941351"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174945066.png" alt="image-20240421174945066"></p>
+<p><img src="/Middleware/JumpServer/image-20240421174948883.png" alt="image-20240421174948883"></p>
+<h2 id="3-6-会话管理"><a href="#3-6-会话管理" class="headerlink" title="3.6 会话管理"></a>3.6 会话管理</h2><p>会话管理可以实现查看当前在线的会话命令记录、历史会话过去的执行过的命令,也可以强制将用户踢出</p>
+<p><img src="/Middleware/JumpServer/image-20240421175007666.png" alt="image-20240421175007666"></p>
+<h3 id="3-6-1-查看在线会话"><a href="#3-6-1-查看在线会话" class="headerlink" title="3.6.1 查看在线会话"></a>3.6.1 查看在线会话</h3><p><img src="/Middleware/JumpServer/image-20240421175019149.png" alt="image-20240421175019149"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175023172.png" alt="image-20240421175023172"></p>
+<h3 id="3-6-2-查看历史会话"><a href="#3-6-2-查看历史会话" class="headerlink" title="3.6.2 查看历史会话"></a>3.6.2 查看历史会话</h3><h4 id="3-6-2-1-在线回放"><a href="#3-6-2-1-在线回放" class="headerlink" title="3.6.2.1 在线回放"></a>3.6.2.1 在线回放</h4><p><img src="/Middleware/JumpServer/image-20240421175034733.png" alt="image-20240421175034733"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175038844.png" alt="image-20240421175038844"></p>
+<h4 id="3-6-2-2-离线查看录像"><a href="#3-6-2-2-离线查看录像" class="headerlink" title="3.6.2.2 离线查看录像"></a>3.6.2.2 离线查看录像</h4><p>可以将历史会话过程下载再播放,但需要下载相关的播放器</p>
+<p>注意：JumpServer-v2.19.1版的录像无法打开</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/jumpserver/VideoPlayer/releases</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Middleware/JumpServer/image-20240421175102810.png" alt="image-20240421175102810"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175107659.png" alt="image-20240421175107659"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175112279.png" alt="image-20240421175112279"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175116773.png" alt="image-20240421175116773"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175120761.png" alt="image-20240421175120761"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175125650.png" alt="image-20240421175125650"></p>
+<h3 id="3-6-3-查看命令历史"><a href="#3-6-3-查看命令历史" class="headerlink" title="3.6.3 查看命令历史"></a>3.6.3 查看命令历史</h3><p><img src="/Middleware/JumpServer/image-20240421175134803.png" alt="image-20240421175134803"></p>
+<h3 id="3-6-4-终端管理"><a href="#3-6-4-终端管理" class="headerlink" title="3.6.4 终端管理"></a>3.6.4 终端管理</h3><p>可以在线监控用户正在进行的操作过程,甚至可以强制中断用户的连接,将其踢出会话</p>
+<p><img src="/Middleware/JumpServer/image-20240421175151715.png" alt="image-20240421175151715"></p>
+<h2 id="3-7-命令过滤器"><a href="#3-7-命令过滤器" class="headerlink" title="3.7 命令过滤器"></a>3.7 命令过滤器</h2><p>使用命令过滤器可以禁止用户执行特定的危险命令,防止误操作或恶意行为</p>
+<p>系统用户可以绑定一些命令过滤器，一个过滤器可以定义一些规则 当用户使用这个系统用户登录资产，然后执行一个命令.这个命令需要被绑定过滤器的所有规则匹配，高优先级先被匹配， 当一个规则匹配到了，如果规则的动作是允许，这个命令会被放行， 如果规则的动作是禁止，命令将会被禁止执行， 否则就匹配下一个规则，如果最后没有匹配到规则，则允许执行</p>
+<p><img src="/Middleware/JumpServer/image-20240421175210340.png" alt="image-20240421175210340"></p>
+<h3 id="3-7-1-创建命令过滤器"><a href="#3-7-1-创建命令过滤器" class="headerlink" title="3.7.1 创建命令过滤器"></a>3.7.1 创建命令过滤器</h3><p>新版3.4.0</p>
+<p><img src="/Middleware/JumpServer/image-20240421175221443.png" alt="image-20240421175221443"></p>
+<p>创建命令组</p>
+<p><img src="/Middleware/JumpServer/image-20240421175229942.png" alt="image-20240421175229942"></p>
+<p>旧版</p>
+<p><img src="/Middleware/JumpServer/image-20240421175237069.png" alt="image-20240421175237069"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175241427.png" alt="image-20240421175241427"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175245265.png" alt="image-20240421175245265"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175249685.png" alt="image-20240421175249685"></p>
+<h3 id="3-7-2-将过滤器绑定系统用户"><a href="#3-7-2-将过滤器绑定系统用户" class="headerlink" title="3.7.2 将过滤器绑定系统用户"></a>3.7.2 将过滤器绑定系统用户</h3><p><img src="/Middleware/JumpServer/image-20240421175301652.png" alt="image-20240421175301652"></p>
+<h3 id="3-7-3-测试"><a href="#3-7-3-测试" class="headerlink" title="3.7.3 测试"></a>3.7.3 测试</h3><p><img src="/Middleware/JumpServer/image-20240421175311281.png" alt="image-20240421175311281"></p>
+<h2 id="3-8-资产的批量导出和导入"><a href="#3-8-资产的批量导出和导入" class="headerlink" title="3.8 资产的批量导出和导入"></a>3.8 资产的批量导出和导入</h2><p>当需要管理的后端服务器很多时,每台主机手动导入效率很低,可以利用资产的导出导入功能实现批量导入,提高效率</p>
+<h3 id="3-8-1-资产的批量导出"><a href="#3-8-1-资产的批量导出" class="headerlink" title="3.8.1 资产的批量导出"></a>3.8.1 资产的批量导出</h3><p><img src="/Middleware/JumpServer/image-20240421175329577.png" alt="image-20240421175329577"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175334096.png" alt="image-20240421175334096"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175339369.png" alt="image-20240421175339369"></p>
+<h3 id="3-8-2-批量导入资产"><a href="#3-8-2-批量导入资产" class="headerlink" title="3.8.2 批量导入资产"></a>3.8.2 批量导入资产</h3><p>参考上面导出的文件格式,生成导入的文件,再批量导入资产</p>
+<p>注意: 删除id列,修改主机名和IP字段,再导入</p>
+<p><img src="/Middleware/JumpServer/image-20240421175351339.png" alt="image-20240421175351339"></p>
+<p>新版还需要将系统帐号推送到新添加的服务器</p>
+<p><img src="/Middleware/JumpServer/image-20240421175402021.png" alt="image-20240421175402021"></p>
+<p>旧版</p>
+<p><img src="/Middleware/JumpServer/image-20240421175414256.png" alt="image-20240421175414256"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175419017.png" alt="image-20240421175419017"></p>
+<p><img src="/Middleware/JumpServer/image-20240421175423961.png" alt="image-20240421175423961"> </p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/Middleware/JumpServer/">https://aquapluto.github.io/Middleware/JumpServer/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/JumpServer/">JumpServer</a></div><div class="post-share"><div class="social-share" data-image="/img/paper1.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/Middleware/OpenVPN/" title="OpenVPN"><img class="cover" src="/img/paper4.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">OpenVPN</div></div><div class="info-2"><div class="info-item-1">1 OpenVPN简介1.1 VP...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">138</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">42</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E5%A0%A1%E5%9E%92%E6%9C%BA%E5%92%8CJumpServer"><span class="toc-text">1 堡垒机和JumpServer</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-1-%E8%B7%B3%E6%9D%BF%E6%9C%BA%E5%92%8C%E5%A0%A1%E5%9E%92%E6%9C%BA"><span class="toc-text">1.1 跳板机和堡垒机</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-2-JumpServer%E7%AE%80%E4%BB%8B"><span class="toc-text">1.2 JumpServer简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-3-JumpServer%E7%94%9F%E4%BA%A7%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-text">1.3 JumpServer生产应用场景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-4-JumpServer%E7%9A%84%E4%BC%98%E5%8A%BF%E5%92%8C%E5%8A%9F%E8%83%BD"><span class="toc-text">1.4 JumpServer的优势和功能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-1-%E7%89%B9%E8%89%B2%E4%BC%98%E5%8A%BF"><span class="toc-text">1.4.1 特色优势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-2-%E5%8A%9F%E8%83%BD%E5%88%97%E8%A1%A8"><span class="toc-text">1.4.2 功能列表</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-5-JumpServer%E7%BB%84%E6%88%90"><span class="toc-text">1.5 JumpServer组成</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-JumpServer%E5%AE%89%E8%A3%85"><span class="toc-text">2 JumpServer安装</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-%E5%AE%89%E8%A3%85%E8%A6%81%E6%B1%82"><span class="toc-text">2.1 安装要求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-%E5%AE%89%E8%A3%85%E6%96%B9%E6%B3%95%E4%BB%8B%E7%BB%8D"><span class="toc-text">2.2 安装方法介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-%E5%9F%BA%E4%BA%8E%E5%AE%B9%E5%99%A8%E9%83%A8%E7%BD%B2"><span class="toc-text">2.3 基于容器部署</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-1-%E7%8E%AF%E5%A2%83%E8%AF%B4%E6%98%8E"><span class="toc-text">2.3.1 环境说明</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-2-%E5%AE%89%E8%A3%85-docker-%E7%8E%AF%E5%A2%83"><span class="toc-text">2.3.2 安装 docker 环境</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-3-%E5%AE%89%E8%A3%85-MySQL-%E6%9C%8D%E5%8A%A1"><span class="toc-text">2.3.3 安装 MySQL 服务</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-3-1-%E4%B8%8B%E8%BD%BD-MySQL-%E9%95%9C%E5%83%8F%E6%9F%A5%E7%9C%8B%E9%BB%98%E8%AE%A4%E9%85%8D%E7%BD%AE"><span class="toc-text">2.3.3.1 下载 MySQL 镜像查看默认配置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-3-2-%E5%9C%A8%E5%AE%BF%E4%B8%BB%E6%9C%BA%E5%87%86%E5%A4%87MySQL%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"><span class="toc-text">2.3.3.2 在宿主机准备MySQL配置文件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-3-3-%E5%90%AF%E5%8A%A8-MySQL-%E5%AE%B9%E5%99%A8"><span class="toc-text">2.3.3.3 启动 MySQL 容器</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-3-4-%E9%AA%8C%E8%AF%81-MySQL"><span class="toc-text">2.3.3.4 验证 MySQL</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-4-%E5%AE%89%E8%A3%85-Redis-%E6%9C%8D%E5%8A%A1"><span class="toc-text">2.3.4 安装 Redis 服务</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-4-1-%E5%90%AF%E5%8A%A8-Redis"><span class="toc-text">2.3.4.1 启动 Redis</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-4-2-%E9%AA%8C%E8%AF%81-Redis%E8%BF%9E%E6%8E%A5"><span class="toc-text">2.3.4.2 验证 Redis连接</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-5-%E9%83%A8%E7%BD%B2-JumpServer"><span class="toc-text">2.3.5 部署 JumpServer</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-5-1-%E7%94%9F%E6%88%90-key-%E5%92%8C-token"><span class="toc-text">2.3.5.1 生成 key 和 token</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-5-2-%E8%BF%90%E8%A1%8C%E5%AE%B9%E5%99%A8"><span class="toc-text">2.3.5.2 运行容器</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-5-3-%E9%AA%8C%E8%AF%81%E6%98%AF%E5%90%A6%E6%88%90%E5%8A%9F"><span class="toc-text">2.3.5.3 验证是否成功</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-5-3-1-%E6%9F%A5%E7%9C%8B%E6%97%A5%E5%BF%97"><span class="toc-text">2.3.5.3.1 查看日志</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-5-3-2-%E6%9F%A5%E7%9C%8B-MySQL-%E4%B8%AD%E7%94%9F%E6%88%90%E7%9B%B8%E5%85%B3%E8%A1%A8"><span class="toc-text">2.3.5.3.2 查看 MySQL 中生成相关表</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-5-3-3-%E6%9F%A5%E7%9C%8B%E7%AB%AF%E5%8F%A3"><span class="toc-text">2.3.5.3.3 查看端口</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-5-3-4-%E9%AA%8C%E8%AF%81%E7%99%BB%E5%BD%95"><span class="toc-text">2.3.5.3.4 验证登录</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-%E4%B8%80%E9%94%AE%E8%84%9A%E6%9C%AC%E5%AE%89%E8%A3%85"><span class="toc-text">2.4 一键脚本安装</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-JumpServer-%E5%B8%B8%E8%A7%81%E5%8A%9F%E8%83%BD"><span class="toc-text">3 JumpServer 常见功能</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-%E7%99%BB%E5%BD%95%E5%B9%B6%E5%88%9D%E5%A7%8B%E5%8C%96%E9%85%8D%E7%BD%AE"><span class="toc-text">3.1 登录并初始化配置</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-1-%E9%A6%96%E6%AC%A1%E7%99%BB%E5%BD%95"><span class="toc-text">3.1.1 首次登录</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-1-1-%E6%B5%8F%E8%A7%88%E5%99%A8%E8%AE%BF%E9%97%AE"><span class="toc-text">3.1.1.1 浏览器访问</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-1-2-ssh-%E7%99%BB%E5%BD%95"><span class="toc-text">3.1.1.2 ssh 登录</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-2-%E4%BF%AE%E6%94%B9-admin-%E7%94%A8%E6%88%B7%E7%9A%84%E5%AF%86%E7%A0%81"><span class="toc-text">3.1.2 修改 admin 用户的密码</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-3-%E9%85%8D%E7%BD%AE%E9%82%AE%E4%BB%B6"><span class="toc-text">3.1.3 配置邮件</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E5%88%9B%E5%BB%BAJumpServer%E7%94%A8%E6%88%B7%E5%92%8C%E7%BB%84"><span class="toc-text">3.2 创建JumpServer用户和组</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-1-%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7"><span class="toc-text">3.2.1 创建用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-2-%E5%88%9B%E5%BB%BA%E7%BB%84%E5%B9%B6%E5%B0%86%E7%94%A8%E6%88%B7%E5%8A%A0%E5%85%A5%E7%BB%84%E4%B8%AD"><span class="toc-text">3.2.2 创建组并将用户加入组中</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-3-%E4%BD%BF%E7%94%A8%E6%96%B0%E7%94%A8%E6%88%B7%E7%99%BB%E5%BD%95"><span class="toc-text">3.2.3 使用新用户登录</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-4-%E7%A6%81%E7%94%A8%E5%92%8C%E5%90%AF%E7%94%A8%E7%94%A8%E6%88%B7"><span class="toc-text">3.2.4 禁用和启用用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-5-%E5%90%AF%E7%94%A8%E7%94%A8%E6%88%B7%E5%A4%9A%E5%9B%A0%E5%AD%90%E8%AE%A4%E8%AF%81%E5%8A%9F%E8%83%BD"><span class="toc-text">3.2.5 启用用户多因子认证功能</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-5-1-%E5%BC%80%E5%90%AFMFA"><span class="toc-text">3.2.5.1 开启MFA</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-5-2-%E7%BB%91%E5%AE%9A%E6%89%8B%E6%9C%BAAPP"><span class="toc-text">3.2.5.2 绑定手机APP</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-5-3-%E9%87%8D%E6%96%B0%E7%99%BB%E5%BD%95%E9%AA%8C%E8%AF%81"><span class="toc-text">3.2.5.3 重新登录验证</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-6-%E5%88%9B%E5%BB%BA%E7%B3%BB%E7%BB%9F%E5%AE%A1%E8%AE%A1%E5%91%98"><span class="toc-text">3.2.6 创建系统审计员</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-%E7%AE%A1%E7%90%86%E8%B5%84%E4%BA%A7"><span class="toc-text">3.3 管理资产</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-1-%E5%88%9B%E5%BB%BA%E7%AE%A1%E7%90%86%E7%94%A8%E6%88%B7-%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7%E4%B8%AD%E7%89%B9%E6%9D%83%E7%94%A8%E6%88%B7"><span class="toc-text">3.3.1 创建管理用户(系统用户中特权用户)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-2-%E5%88%9B%E5%BB%BA%E8%B5%84%E4%BA%A7"><span class="toc-text">3.3.2 创建资产</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-3-2-1-%E5%88%9B%E5%BB%BA%E8%B5%84%E4%BA%A7"><span class="toc-text">3.3.2.1 创建资产</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-3-2-2-%E5%88%9B%E5%BB%BA%E8%8A%82%E7%82%B9%E5%AE%9E%E7%8E%B0%E8%B5%84%E4%BA%A7%E5%88%86%E7%B1%BB"><span class="toc-text">3.3.2.2 创建节点实现资产分类</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-4-%E6%8E%88%E6%9D%83%E7%AE%A1%E7%90%86"><span class="toc-text">3.4 授权管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-1-%E5%88%9B%E5%BB%BA%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7-%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7%E4%B8%AD%E6%99%AE%E9%80%9A%E7%94%A8%E6%88%B7"><span class="toc-text">3.4.1 创建系统用户(系统用户中普通用户)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-2-%E5%85%B3%E8%81%94%E4%BD%BF%E7%94%A8%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7%E7%9A%84%E8%B5%84%E4%BA%A7"><span class="toc-text">3.4.2 关联使用系统用户的资产</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-3-%E5%88%9B%E5%BB%BA%E6%8E%88%E6%9D%83%E8%A7%84%E5%88%99"><span class="toc-text">3.4.3 创建授权规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-4-%E6%B5%8B%E8%AF%95%E7%99%BB%E5%BD%95%E8%AE%BF%E9%97%AE%E5%90%8E%E7%AB%AF%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="toc-text">3.4.4 测试登录访问后端服务器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-5-%E6%B5%8B%E8%AF%95%E4%B8%8A%E4%BC%A0%E5%92%8C%E4%B8%8B%E8%BD%BD%E6%96%87%E4%BB%B6"><span class="toc-text">3.4.5 测试上传和下载文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-6-ssh%E8%BF%9E%E6%8E%A5JumpServer"><span class="toc-text">3.4.6 ssh连接JumpServer</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-5-%E6%95%B0%E6%8D%AE%E5%BA%93%E6%8E%88%E6%9D%83"><span class="toc-text">3.5 数据库授权</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-1-%E5%9C%A8%E5%90%8E%E7%AB%AF%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E8%A3%85MySQL%E5%B9%B6%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93%E5%92%8C%E7%94%A8%E6%88%B7"><span class="toc-text">3.5.1 在后端服务器安装MySQL并创建数据库和用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-2-%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93%E5%BA%94%E7%94%A8"><span class="toc-text">3.5.2 创建数据库应用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-3-%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7"><span class="toc-text">3.5.3 创建数据库的系统用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-4-%E5%88%9B%E5%BB%BA%E6%95%B0%E6%8D%AE%E5%BA%93%E6%8E%88%E6%9D%83%E8%A7%84%E5%88%99"><span class="toc-text">3.5.4 创建数据库授权规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-5-%E6%B5%8B%E8%AF%95%E6%95%B0%E6%8D%AE%E5%BA%93%E8%BF%9E%E6%8E%A5"><span class="toc-text">3.5.5 测试数据库连接</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-5-5-1-web-%E6%96%B9%E5%BC%8F%E8%BF%9E%E6%8E%A5MySQL%E8%B5%84%E4%BA%A7"><span class="toc-text">3.5.5.1 web 方式连接MySQL资产</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-5-5-2-%E7%94%A8ssh%E8%BF%9E%E6%8E%A5MySQL%E8%B5%84%E4%BA%A7"><span class="toc-text">3.5.5.2 用ssh连接MySQL资产</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-6-%E4%BC%9A%E8%AF%9D%E7%AE%A1%E7%90%86"><span class="toc-text">3.6 会话管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-1-%E6%9F%A5%E7%9C%8B%E5%9C%A8%E7%BA%BF%E4%BC%9A%E8%AF%9D"><span class="toc-text">3.6.1 查看在线会话</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-2-%E6%9F%A5%E7%9C%8B%E5%8E%86%E5%8F%B2%E4%BC%9A%E8%AF%9D"><span class="toc-text">3.6.2 查看历史会话</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-6-2-1-%E5%9C%A8%E7%BA%BF%E5%9B%9E%E6%94%BE"><span class="toc-text">3.6.2.1 在线回放</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-6-2-2-%E7%A6%BB%E7%BA%BF%E6%9F%A5%E7%9C%8B%E5%BD%95%E5%83%8F"><span class="toc-text">3.6.2.2 离线查看录像</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-3-%E6%9F%A5%E7%9C%8B%E5%91%BD%E4%BB%A4%E5%8E%86%E5%8F%B2"><span class="toc-text">3.6.3 查看命令历史</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-4-%E7%BB%88%E7%AB%AF%E7%AE%A1%E7%90%86"><span class="toc-text">3.6.4 终端管理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-7-%E5%91%BD%E4%BB%A4%E8%BF%87%E6%BB%A4%E5%99%A8"><span class="toc-text">3.7 命令过滤器</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-7-1-%E5%88%9B%E5%BB%BA%E5%91%BD%E4%BB%A4%E8%BF%87%E6%BB%A4%E5%99%A8"><span class="toc-text">3.7.1 创建命令过滤器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-7-2-%E5%B0%86%E8%BF%87%E6%BB%A4%E5%99%A8%E7%BB%91%E5%AE%9A%E7%B3%BB%E7%BB%9F%E7%94%A8%E6%88%B7"><span class="toc-text">3.7.2 将过滤器绑定系统用户</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-7-3-%E6%B5%8B%E8%AF%95"><span class="toc-text">3.7.3 测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-8-%E8%B5%84%E4%BA%A7%E7%9A%84%E6%89%B9%E9%87%8F%E5%AF%BC%E5%87%BA%E5%92%8C%E5%AF%BC%E5%85%A5"><span class="toc-text">3.8 资产的批量导出和导入</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-8-1-%E8%B5%84%E4%BA%A7%E7%9A%84%E6%89%B9%E9%87%8F%E5%AF%BC%E5%87%BA"><span class="toc-text">3.8.1 资产的批量导出</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-8-2-%E6%89%B9%E9%87%8F%E5%AF%BC%E5%85%A5%E8%B5%84%E4%BA%A7"><span class="toc-text">3.8.2 批量导入资产</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/controller/introduce/" title="控制器介绍"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="控制器介绍"/></a><div class="content"><a class="title" href="/Kubernetes/controller/introduce/" title="控制器介绍">控制器介绍</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/containerd/" title="基于containerd部署k8s-v1.30"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="基于containerd部署k8s-v1.30"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/containerd/" title="基于containerd部署k8s-v1.30">基于containerd部署k8s-v1.30</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/cluster/" title="集群管理指南"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="集群管理指南"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/cluster/" title="集群管理指南">集群管理指南</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/docker/" title="基于docker部署k8s-v1.30"><img src="/img/paper5.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="基于docker部署k8s-v1.30"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/docker/" title="基于docker部署k8s-v1.30">基于docker部署k8s-v1.30</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/explanation/" title="概论"><img src="/img/paper2.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="概论"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/explanation/" title="概论">概论</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

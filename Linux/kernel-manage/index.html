@@ -1,0 +1,831 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>introduce | 代码推演录</title><meta name="author" content="Aquarius"><meta name="copyright" content="Aquarius"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="1 linux系统的启动流程&#x3D;&#x3D;1、通电自检阶段&#x3D;&#x3D; 通电后，首先执行BIOS（传统）或 UEFI 固件（现代主板，替代 BIOS 的更先进标准），运行POST（加电自检），检查 CPU、内存、硬盘等核心硬件是否正常。  BIOS 的配置数据存放在CMOS芯片中（由主板电池供电保持）； UEFI 则通常将配置存放在主板的非易失性存储器中，功能更强大（支持更大">
+<meta property="og:type" content="article">
+<meta property="og:title" content="introduce">
+<meta property="og:url" content="https://aquapluto.github.io/Linux/kernel-manage/">
+<meta property="og:site_name" content="代码推演录">
+<meta property="og:description" content="1 linux系统的启动流程&#x3D;&#x3D;1、通电自检阶段&#x3D;&#x3D; 通电后，首先执行BIOS（传统）或 UEFI 固件（现代主板，替代 BIOS 的更先进标准），运行POST（加电自检），检查 CPU、内存、硬盘等核心硬件是否正常。  BIOS 的配置数据存放在CMOS芯片中（由主板电池供电保持）； UEFI 则通常将配置存放在主板的非易失性存储器中，功能更强大（支持更大">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aquapluto.github.io/img/paper3.png">
+<meta property="article:published_time" content="2025-08-18T08:20:18.000Z">
+<meta property="article:modified_time" content="2025-09-09T15:26:02.287Z">
+<meta property="article:author" content="Aquarius">
+<meta property="article:tag" content="introduce">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aquapluto.github.io/img/paper3.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "introduce",
+  "url": "https://aquapluto.github.io/Linux/kernel-manage/",
+  "image": "https://aquapluto.github.io/img/paper3.png",
+  "datePublished": "2025-08-18T08:20:18.000Z",
+  "dateModified": "2025-09-09T15:26:02.287Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Aquarius",
+      "url": "https://AquaPluto.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://aquapluto.github.io/Linux/kernel-manage/"><link rel="preconnect" href="//unpkg.com"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: {"defaultEncoding":2,"translateDelay":0,"msgToTraditionalChinese":"繁","msgToSimplifiedChinese":"簡"},
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'introduce',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/wave.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      if ($loadingBox.classList.contains('loaded')) return
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+
+  if (document.readyState === 'complete') {
+    preloader.endLoading()
+  } else {
+    window.addEventListener('load', preloader.endLoading)
+    document.addEventListener('DOMContentLoaded', preloader.endLoading)
+    // Add timeout protection: force end after 7 seconds
+    setTimeout(preloader.endLoading, 7000)
+  }
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">138</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">42</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/software-manage/"><span>软件包管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/OOM/"><span>OOM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/swap/"><span>Swap分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/data-synchronization/"><span>数据的实时同步</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/mail/"><span>邮件服务</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/kernel-manage/"><span>内核和启动管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-lock/"><span>进程锁</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/queue/"><span>队列实现线程并发控制</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/MySQL/SQL/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/Redis/deploy/"><span>部署安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Tomcat/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>存储</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/conspect/"><span>存储概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/nfs/"><span>NFS</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/conspect/"><span>Docker概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/image/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/container/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/volume/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/network/"><span>网络管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/compose/"><span>Docker-Compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/conspect/"><span>镜像概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/dockerfile/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/build/"><span>构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/harbor/"><span>镜像仓库</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/management/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-cgroup/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-usage/"><span>监控容器真实的cpu使用率</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/containerd/"><span>Containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>K8s</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kubernetes概论</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/architecture/"><span>Kubernetes架构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/cri/"><span>容器运行时接口CRI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/list-watch/"><span>List-Watch机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/object/"><span>Kubernetes对象</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/namespace/"><span>Namespace</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/kubectl/"><span>kubectl命令</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>部署安装</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/explanation/"><span>部署说明</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/docker/"><span>基于docker部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/containerd/"><span>基于containerd部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/cluster/"><span>集群管理指南</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Pod</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/conspect/"><span>Pod概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/configuration/"><span>Pod的配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/schedule/"><span>Pod的调度</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/eviction/"><span>Pod的驱逐</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>控制器</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/introduce/"><span>控制器介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/deployment/"><span>Deployment</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/statefulset/"><span>StatefulSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/daemonset/"><span>DaemonSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/job-cronjob/"><span>Job和CronJob</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/HPA/"><span>HPA</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/operator/"><span>Operator</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务发现与负载均衡</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/service/"><span>Service</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/ingress/"><span>Ingress</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/coredns/"><span>CoreDNS</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/localdns/"><span>LocalDNS</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>数据存储持久化</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/csi/"><span>存储接口CSI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/pv-pvc/"><span>PV和PVC</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/storageclass/"><span>StorageClass</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/configmap-secret/"><span>ConfigMap和Secret</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>认证与鉴权体系</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/conspect/"><span>体系概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/kubeconfig/"><span>kubeconfig</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/user-account/"><span>User Account</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/service-account/"><span>Service Account</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/introduce/"><span>prometheus概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/query-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/indicators-remarked/"><span>指标重新打标</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/pushmanager/"><span>Pushmanager</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/cluster-ha/"><span>集群与高可用</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/ha/"><span>高可用架构</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/grafana/"><span>Grafana</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/streaming/"><span>基于流处理的可观测性架构</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/paper3.png);"><nav id="nav"><!-- 左侧博客信息区域--><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">introduce</span></a></span><!-- 新增的导航菜单容器（居中布局关键）--><div id="nav-menus-container"><!-- 菜单主体部分--><div id="menus"><!-- 菜单项--><div class="menus_items"><!-- 一级菜单项（非目录）--><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>计算机基础</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>计算机组成原理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hardware-composition/"><span>计算机硬件组成</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/CPU/"><span>CPU</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/memory/"><span>内存</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/computer-composition/hard-disk/"><span>硬盘</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>操作系统</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/concept/"><span>操作系统的概念</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/processes-threads/"><span>进程与线程</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/ComputerBasic/operating-system/IO-model/"><span>IO模型</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Linux</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>linux基础</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/introduce/"><span>linux介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-structure-and-IO-redirects/"><span>文件结构与IO重定向</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/file-command/"><span>文件管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/text-command/"><span>文本管理工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/GSA/"><span>文本处理三剑客</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/user-permission/"><span>用户和权限管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/basics/regular-expression/"><span>正则表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/software-manage/"><span>软件包管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>进程管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/command/"><span>进程相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/signal/"><span>信号发送</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/job-parallel/"><span>作业管理与并行运行</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/process-manage/OOM/"><span>OOM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>磁盘管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/disk-partition/"><span>磁盘分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/file-system/"><span>文件系统</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/swap/"><span>Swap分区</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/disk-manage/LVM/"><span>逻辑卷管理器LVM</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>网络管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/configuration/"><span>网络配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/test-diagnostic/"><span>网络测试诊断工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/bridge/"><span>网桥配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/network-manage/troubleshoot/"><span>网络问题排查</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务管理</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/DNS/"><span>域名DNS解析服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/time-synchronization/"><span>时间同步服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/plan-tasks/"><span>计划任务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/log/"><span>日志服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/data-synchronization/"><span>数据的实时同步</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/ssh/"><span>ssh远程连接服务</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/service-manage/mail/"><span>邮件服务</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/kernel-manage/"><span>内核和启动管理</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>防火墙</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/introduce/"><span>安全技术和防火墙</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/iptables/"><span>iptables</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/firewalld/"><span>firewalld</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/firewall/nft/"><span>nft</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>加密和安全</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/security-mechanisms/"><span>安全机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/OpenSSL/"><span>OpenSSL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/sudo/"><span>sudo实现授权</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/encryption-security/PAM/"><span>PAM认证机制</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>shell编程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/introduce/"><span>shell脚本介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/variable/"><span>变量</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/operations-conditional/"><span>运算和条件测试</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-control/"><span>流程控制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/function/"><span>函数</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/array/"><span>数组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/string/"><span>字符串</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/script-tools/"><span>脚本相关工具</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/process-lock/"><span>进程锁</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Linux/shell/queue/"><span>队列实现线程并发控制</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Linux/system-optimization/"><span>系统优化</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>数据库</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>MySQL</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/MySQL/SQL/"><span>SQL语句</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Redis</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/DataBase/Redis/deploy/"><span>部署安装</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>中间件</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Nginx</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Nginx/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>HAProxy</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/HAProxy/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Keepalived</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Keepalived/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kafka</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Kafka/111/"><span>111</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Tomcat</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Middleware/Tomcat/111/"><span>111</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>日志</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>存储</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/conspect/"><span>存储概论</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Storage/nfs/"><span>NFS</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>容器</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/basics/"><span>容器基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Docker</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/conspect/"><span>Docker概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/image/"><span>镜像管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/container/"><span>容器管理命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/volume/"><span>数据卷</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/network/"><span>网络管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/docker/compose/"><span>Docker-Compose</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>镜像</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/conspect/"><span>镜像概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/dockerfile/"><span>dockerfile</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/build/"><span>构建镜像</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/mirror/harbor/"><span>镜像仓库</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>容器进程</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/management/"><span>容器里的进程管理</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-cgroup/"><span>cpu cgroup使用</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Container/process/cpu-usage/"><span>监控容器真实的cpu使用率</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/memory/"><span>容器内存</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/storage/"><span>容器存储</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/network/"><span>容器网络</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/safe/"><span>容器安全</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Container/containerd/"><span>Containerd</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>K8s</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Kubernetes概论</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/architecture/"><span>Kubernetes架构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/cri/"><span>容器运行时接口CRI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/list-watch/"><span>List-Watch机制</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/object/"><span>Kubernetes对象</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/namespace/"><span>Namespace</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/conspect/kubectl/"><span>kubectl命令</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>部署安装</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/explanation/"><span>部署说明</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/docker/"><span>基于docker部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/containerd/"><span>基于containerd部署k8s-v1.30</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/deploy/cluster/"><span>集群管理指南</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Pod</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/conspect/"><span>Pod概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/configuration/"><span>Pod的配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/schedule/"><span>Pod的调度</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/pod/eviction/"><span>Pod的驱逐</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>控制器</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/introduce/"><span>控制器介绍</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/deployment/"><span>Deployment</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/statefulset/"><span>StatefulSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/daemonset/"><span>DaemonSet</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/job-cronjob/"><span>Job和CronJob</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/HPA/"><span>HPA</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/controller/operator/"><span>Operator</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>服务发现与负载均衡</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/service/"><span>Service</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/ingress/"><span>Ingress</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/coredns/"><span>CoreDNS</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/service-loadbalancer/localdns/"><span>LocalDNS</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>数据存储持久化</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/csi/"><span>存储接口CSI</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/pv-pvc/"><span>PV和PVC</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/storageclass/"><span>StorageClass</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/data-storage/configmap-secret/"><span>ConfigMap和Secret</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>认证与鉴权体系</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/conspect/"><span>体系概论</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/kubeconfig/"><span>kubeconfig</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/user-account/"><span>User Account</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Kubernetes/certification-authentication/service-account/"><span>Service Account</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>监控</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/conspect/"><span>监控概论</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Prometheus</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/introduce/"><span>prometheus概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/exporter/"><span>Exporter</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/promql/"><span>PromQL</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/query-persist/"><span>查询结果持久化</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/service-discovery/"><span>服务发现</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/indicators-remarked/"><span>指标重新打标</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/pushmanager/"><span>Pushmanager</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/prometheus/cluster-ha/"><span>集群与高可用</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Alertmanager</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/introduce/"><span>告警功能概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/alarm/"><span>实现告警功能</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/Monitor/alertmanager/ha/"><span>高可用架构</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/grafana/"><span>Grafana</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/Monitor/streaming/"><span>基于流处理的可观测性架构</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>CICD</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>Ansible</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/introduce/"><span>架构概述</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/deploy/"><span>部署与配置</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/command/"><span>相关命令</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/module/"><span>常用模块</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/CICD/ansible/playbook/"><span>PlayBook</span></a></li></ul></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>SRE</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/SRE/111/"><span>111</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Python</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>python基础</span></a></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>线性表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>列表</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>元组</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字符串</span></a></li></ul></li><!-- 二级目录（包含三级菜单）--><li class="menus_item_second"><span class="site-page group second"><span>哈希表</span><i class="fas fa-chevron-right"></i></span><ul class="menus_item_child_second"><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>封装与解构</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>集合</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>字典</span></a></li><!-- 三级菜单项--><li><a class="site-page third" href="/python/111/"><span>解析式与生成器表达式</span></a></li></ul></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>函数</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>IO操作</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>面向对象编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>并发编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>网络编程</span></a></li><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/python/111/"><span>数据库编程</span></a></li></ul></div><!-- 一级目录（包含二级菜单）--><div class="menus_item"><span class="site-page group"><span>Django</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><!-- 二级菜单项（非目录）--><li><a class="site-page child" href="/ELK/111/"><span>111</span></a></li></ul></div></div></div></div><!-- 右侧功能区域（新增容器）--><div id="nav-right-container"><!-- 搜索按钮（移动到右侧）--><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i></span></div><!-- 移动端汉堡菜单按钮--><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">introduce</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-08-18T08:20:18.000Z" title="发表于 2025-08-18 16:20">2025-08-18</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-09-09T15:26:02.287Z" title="更新于 2025-09-09 23:26">2025-09-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Linux/">Linux</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">9.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>37分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><section class="main-hero-waves-area waves-area"><svg class="waves-svg" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto"><defs><path id="gentle-wave" d="M -160 44 c 30 0 58 -18 88 -18 s 58 18 88 18 s 58 -18 88 -18 s 58 18 88 18 v 44 h -352 Z"></path></defs><g class="parallax"><use href="#gentle-wave" x="48" y="0"></use><use href="#gentle-wave" x="48" y="3"></use><use href="#gentle-wave" x="48" y="5"></use><use href="#gentle-wave" x="48" y="7"></use></g></svg></section></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="1-linux系统的启动流程"><a href="#1-linux系统的启动流程" class="headerlink" title="1 linux系统的启动流程"></a>1 linux系统的启动流程</h1><p>&#x3D;&#x3D;1、通电自检阶段&#x3D;&#x3D;</p>
+<p>通电后，首先执行BIOS（传统）或 UEFI 固件（现代主板，替代 BIOS 的更先进标准），运行POST（加电自检），检查 CPU、内存、硬盘等核心硬件是否正常。</p>
+<ul>
+<li>BIOS 的配置数据存放在CMOS芯片中（由主板电池供电保持）；</li>
+<li>UEFI 则通常将配置存放在主板的非易失性存储器中，功能更强大（支持更大硬盘、图形界面、安全启动等）。</li>
+</ul>
+<p>&#x3D;&#x3D;2、引导设备选择与引导程序加载&#x3D;&#x3D;</p>
+<ul>
+<li>传统 BIOS：读取启动盘的MBR（主引导记录，位于磁盘第一个扇区，512 字节），其中前 446 字节是引导程序（bootloader），后 64 字节是分区表，最后 2 字节是结束标志（0x55AA）。MBR 将引导程序加载到内存执行。</li>
+<li>UEFI：不依赖 MBR，而是从启动盘的ESP 分区（EFI 系统分区） 中读取 EFI 引导程序（如<code>grubx64.efi</code>），直接加载到内存执行，避免了 MBR 的容量限制（如仅支持 2TB 以下磁盘）。</li>
+</ul>
+<p>&#x3D;&#x3D;3、Bootloader 阶段&#x3D;&#x3D;</p>
+<p>引导程序（如 GRUB2）的作用是定位并加载内核和初始化内存盘（initramfs&#x2F;initrd）：</p>
+<ul>
+<li>传统 BIOS 中，MBR 引导程序可能需要加载第二阶段引导程序（如 GRUB 的 stage2），最终找到内核文件（如<code>/boot/vmlinuz-xxx</code>）和初始化内存盘（如<code>/boot/initramfs-xxx.img</code>）。</li>
+<li>加载后，引导程序将内核和 initramfs 载入内存，并将控制权交给内核。</li>
+</ul>
+<p>&#x3D;&#x3D;4、内核初始化阶段&#x3D;&#x3D;</p>
+<ul>
+<li>内核启动后，首先执行自身初始化（如检测硬件、初始化进程管理、内存管理等）。</li>
+<li>挂载initramfs（临时根文件系统）：initramfs 包含启动阶段必需的驱动程序（如硬盘控制器、文件系统驱动），确保内核能识别并挂载真正的根文件系统（如<code>/dev/sda1</code>）。</li>
+<li>切换根文件系统：内核通过 initramfs 中的工具找到并挂载磁盘上的根文件系统（<code>switch_root</code>），然后卸载 initramfs。</li>
+</ul>
+<p>&#x3D;&#x3D;5、用户空间初始化（systemd）&#x3D;&#x3D;</p>
+<p>内核启动完成后，运行用户空间的第一个进程systemd（PID&#x3D;1），后续流程由 systemd 主导：</p>
+<ul>
+<li>执行<code>default.target</code>（默认目标，如<code>multi-user.target</code>或<code>graphical.target</code>，相当于传统运行级），并按依赖关系启动相关服务。</li>
+<li>先启动<code>sysinit.target</code>（初始化系统，如挂载<code>/proc</code>、<code>/sys</code>，加载模块等）和<code>basic.target</code>（基础服务准备）。</li>
+<li>启动<code>multi-user.target</code>下的服务（如网络、ssh 等服务器服务），若默认目标是图形界面，还会启动<code>graphical.target</code>依赖的桌面服务。</li>
+<li>执行<code>/etc/rc.d/rc.local</code>（仅兼容传统脚本，需<code>chmod +x</code>才会执行，现代推荐用 systemd 服务替代）。</li>
+<li>启动<code>getty.target</code>（终端登录服务），提供控制台或图形登录界面。</li>
+</ul>
+<p>通过systemd-analyze 工具可以了解启动的详细过程</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#systemd-analyze blame</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成网页</span></span><br><span class="line">systemd-analyze plot &gt; boot.html</span><br></pre></td></tr></table></figure>
+
+<p>操作系统启动起来负责管理一系列进程，这些进程可以分为两大类</p>
+<ul>
+<li>内核先启动一个老祖宗程序，pid为0，0号进程负责运行两个顶级程序，产生两个顶级的进程</li>
+<li>运行init程序，pid号为1：是所有用户态进程的祖宗<ul>
+<li>它是系统的第一个进程，负责产生其他所有用户进程</li>
+<li>init 以守护进程方式存在，是所有其他进程的祖先</li>
+<li>具有启动守护进程，收养孤儿，定期发起wait或waitpid的功能去回收成为僵尸的儿子，将操作系统信号转发给子进程的功能</li>
+</ul>
+</li>
+<li>运行kthreadd程序，pid2：是所有内核态进程的祖宗</li>
+</ul>
+<p>在内核完成了系统的各种初始化之后，这个程序需要执行的第一个用户态程就是 init 进程，PID号为1，该进程是系统中所有其他进程的祖宗，在centos6中该祖宗进程称之为init，在centos7之后该祖宗进程名为systemd。即操作系统启动时是先执行内核态代码，然后在内核里调用1号进程的代码，从内核态切换到用户态</p>
+<h1 id="2-程序启动加载器bootloader"><a href="#2-程序启动加载器bootloader" class="headerlink" title="2 程序启动加载器bootloader"></a>2 程序启动加载器bootloader</h1><p>linux中的bootloader功能丰富，提供菜单，允许用户选择要启动系统或不同的内核版本；把用户选定的内核装载到内存中的特定空间中，解压、展开，并把系统控制权移交给内核</p>
+<ul>
+<li><p>LILO：LInux LOader，早期的bootloader，功能单一</p>
+</li>
+<li><p>GRUB: GRand Unified Bootloader，CentOS 7 以后使用GRUB 2.02</p>
+</li>
+</ul>
+<h2 id="2-1-GRUB2启动阶段"><a href="#2-1-GRUB2启动阶段" class="headerlink" title="2.1 GRUB2启动阶段"></a>2.1 GRUB2启动阶段</h2><p>1、Primary Boot Loader（第一阶段引导程序）</p>
+<ul>
+<li>1st stage（第一阶段）<ul>
+<li>存储在硬盘的0磁道0扇区（MBR 的前 446 字节），这是计算机启动时 BIOS&#x2F;UEFI 首先读取的区域。功能极其简单：仅负责定位并加载下一阶段的引导程序（1.5 stage），因空间限制（仅 446 字节），无法直接识别文件系统或执行复杂操作。</li>
+</ul>
+</li>
+<li>1.5 stage（过渡阶段）<ul>
+<li>存储在 MBR 后续的扇区（1 扇区到 2047 扇区，约 1MB 空间），主要作用是加载文件系统驱动。由于 1st stage 无法识别分区的文件系统（如 ext4、xfs 等），1.5 stage 通过提供驱动，让引导程序能够识别第二阶段（2nd stage）所在分区的文件系统，确保后续程序可被正确读取。</li>
+<li>当 1.5 stage 成功识别文件系统后，会加载 2nd stage 程序，再由它读取配置文件，显示启动菜单并引导用户选择要启动的操作系统。</li>
+</ul>
+</li>
+</ul>
+<p>2、Secondary Boot Loader（第二阶段引导程序）：2nd stage（第二阶段）</p>
+<ul>
+<li>存储在磁盘的<code>/boot/grub/</code>目录（通常位于单独的<code>/boot</code>分区），是功能完整的引导程序核心。其配置文件 <code>/boot/grub/grub.conf</code>（或<code>menu.lst</code>）负责定义操作系统的启动信息，包括：<ul>
+<li>操作系统内核的位置（如<code>/vmlinuz-xxx</code>）</li>
+<li>初始化内存盘（initrd）的路径</li>
+<li>启动菜单选项、超时时间等</li>
+</ul>
+</li>
+</ul>
+<h2 id="2-2-GRUB2命令"><a href="#2-2-GRUB2命令" class="headerlink" title="2.2 GRUB2命令"></a>2.2 GRUB2命令</h2><p>grub2常用子命令</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">help</span> 										<span class="comment">#获取帮助列表</span></span><br><span class="line"><span class="built_in">help</span> KEYWORD 						<span class="comment">#获取指定内容帮助</span></span><br><span class="line">boot 										<span class="comment">#使用选中的内核启动</span></span><br><span class="line"><span class="built_in">set</span> root=(hd#,#) 				<span class="comment">#适用于MBR分区，指定操作系统所在的设备和分区，即指定根分区</span></span><br><span class="line">	hd#: 磁盘编号，用数字表示；从0开始编号</span><br><span class="line">	<span class="comment">#: 分区编号，用数字表示; 从0开始编号</span></span><br><span class="line">	示例：(hd0,0) 第一块硬盘，第一个分区</span><br><span class="line"><span class="built_in">set</span> root=(hd#,gpt#)    	<span class="comment">#适用于GPT分区</span></span><br><span class="line">linux /PATH/TO/KERNEL_FILE 					<span class="comment">#指定kernel文件位置，后面可以加参数</span></span><br><span class="line">initrd16  /PATH/TO/INITRAMFS_FILE 	<span class="comment">#设定为选定的内核提供额外文件的ramdisk</span></span><br></pre></td></tr></table></figure>
+
+<p>查看当前启动内核的启动时的参数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu2204:~# <span class="built_in">cat</span> /proc/cmdline</span><br><span class="line">BOOT_IMAGE=/vmlinuz-5.15.0-142-generic root=UUID=7c41b884-0744-438c-a734-dac2c74495f8 ro</span><br><span class="line"></span><br><span class="line">[root@rocky9 ~]#<span class="built_in">cat</span> /proc/cmdline</span><br><span class="line">BOOT_IMAGE=(hd0,msdos1)/vmlinuz-5.14.0-570.17.1.el9_6.x86_64 root=/dev/mapper/rl-root ro crashkernel=1G-4G:192M,4G-64G:256M,64G-:512M resume=/dev/mapper/rl-swap rd.lvm.lv=rl/root rd.lvm.lv=rl/swap</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-3-GRUB2管理文件"><a href="#2-3-GRUB2管理文件" class="headerlink" title="2.3 GRUB2管理文件"></a>2.3 GRUB2管理文件</h2><p>GRUB2的主配置文件：<code>/boot/grub2/grub.cfg</code></p>
+<p>GRUB2的配置逻辑是<code>/etc/default/grub</code>（全局参数） + <code>/etc/grub.d/</code>（脚本文件） → 经 <code>grub-mkconfig</code> 生成 → <code>grub.cfg</code>（最终生效配置）。</p>
+<p>用户无需直接编辑 <code>grub.cfg</code>，而是通过修改 <code>/etc/default/grub</code> 或 <code>/etc/grub.d/</code> 下的脚本，再用 <code>grub-mkconfig</code> 更新配置</p>
+<p>范例：红帽系统</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky8 ~]#<span class="built_in">cat</span> /etc/default/grub</span><br><span class="line">GRUB_TIMEOUT=5</span><br><span class="line">GRUB_DISTRIBUTOR=<span class="string">&quot;<span class="subst">$(sed &#x27;s, release .*$,,g&#x27; /etc/system-release)</span>&quot;</span></span><br><span class="line">GRUB_DEFAULT=saved</span><br><span class="line">GRUB_DISABLE_SUBMENU=<span class="literal">true</span></span><br><span class="line">GRUB_TERMINAL_OUTPUT=<span class="string">&quot;console&quot;</span></span><br><span class="line">GRUB_CMDLINE_LINUX=<span class="string">&quot;crashkernel=auto resume=/dev/mapper/rl-swap rd.lvm.lv=rl/root rd.lvm.lv=rl/swap rhgb quiet net.ifnames=0&quot;</span></span><br><span class="line">GRUB_DISABLE_RECOVERY=<span class="string">&quot;true&quot;</span></span><br><span class="line">GRUB_ENABLE_BLSCFG=<span class="literal">true</span></span><br><span class="line"></span><br><span class="line">[root@rocky8 ~]#<span class="built_in">ls</span> /etc/grub.d/</span><br><span class="line">00_header  01_users  10_linux    12_menu_auto_hide  20_ppc_terminfo  30_uefi-firmware  41_custom</span><br><span class="line">00_tuned   08_fallback_counting  10_reset_boot_success  20_linux_xen   30_os-prober   40_custom   README</span><br></pre></td></tr></table></figure>
+
+<p>范例：Ubuntu</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu2204:~# <span class="built_in">cat</span> /etc/default/grub</span><br><span class="line"><span class="comment"># If you change this file, run &#x27;update-grub&#x27; afterwards to update</span></span><br><span class="line"><span class="comment"># /boot/grub/grub.cfg.</span></span><br><span class="line"><span class="comment"># For full documentation of the options in this file, see:</span></span><br><span class="line"><span class="comment">#   info -f grub -n &#x27;Simple configuration&#x27;</span></span><br><span class="line"></span><br><span class="line">GRUB_DEFAULT=0</span><br><span class="line">GRUB_TIMEOUT_STYLE=hidden</span><br><span class="line">GRUB_TIMEOUT=0</span><br><span class="line">GRUB_DISTRIBUTOR=`lsb_release -i -s 2&gt; /dev/null || <span class="built_in">echo</span> Debian`</span><br><span class="line">GRUB_CMDLINE_LINUX_DEFAULT=<span class="string">&quot;&quot;</span></span><br><span class="line">GRUB_CMDLINE_LINUX=<span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Uncomment to enable BadRAM filtering, modify to suit your needs</span></span><br><span class="line"><span class="comment"># This works with Linux (no patch required) and with any kernel that obtains</span></span><br><span class="line"><span class="comment"># the memory map information from GRUB (GNU Mach, kernel of FreeBSD ...)</span></span><br><span class="line"><span class="comment">#GRUB_BADRAM=&quot;0x01234567,0xfefefefe,0x89abcdef,0xefefefef&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Uncomment to disable graphical terminal (grub-pc only)</span></span><br><span class="line"><span class="comment">#GRUB_TERMINAL=console</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># The resolution used on graphical terminal</span></span><br><span class="line"><span class="comment"># note that you can use only modes which your graphic card supports via VBE</span></span><br><span class="line"><span class="comment"># you can see them in real GRUB with the command `vbeinfo&#x27;</span></span><br><span class="line"><span class="comment">#GRUB_GFXMODE=640x480</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Uncomment if you don&#x27;t want GRUB to pass &quot;root=UUID=xxx&quot; parameter to Linux</span></span><br><span class="line"><span class="comment">#GRUB_DISABLE_LINUX_UUID=true</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Uncomment to disable generation of recovery mode menu entries</span></span><br><span class="line"><span class="comment">#GRUB_DISABLE_RECOVERY=&quot;true&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Uncomment to get a beep at grub start</span></span><br><span class="line"><span class="comment">#GRUB_INIT_TUNE=&quot;480 440 1&quot;</span></span><br><span class="line"></span><br><span class="line">root@ubuntu2204:~# <span class="built_in">ls</span> /etc/grub.d/</span><br><span class="line">00_header         10_linux          20_linux_xen      30_uefi-firmware  40_custom         README            </span><br><span class="line">05_debian_theme   10_linux_zfs      30_os-prober      35_fwupd          41_custom    </span><br></pre></td></tr></table></figure>
+
+<h2 id="2-4-GRUB2加密"><a href="#2-4-GRUB2加密" class="headerlink" title="2.4 GRUB2加密"></a>2.4 GRUB2加密</h2><p>Centos</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">centos7<span class="number">.2</span> + 中引入了新的实用程序“ grub2-setpassword ”，为grub加密，防止破解系统root密码</span><br><span class="line"></span><br><span class="line">(<span class="number">1</span>) 执行 grub2-setpassword 命令</span><br><span class="line"><span class="comment"># grub2-setpassword</span></span><br><span class="line">Enter password:</span><br><span class="line">Confirm password:</span><br><span class="line">  </span><br><span class="line">(<span class="number">2</span>）如果现在重新启动系统并尝试修改引导条目，系统将要求提供凭据，但是可以在没有凭据的情况下修改引导条目。为了阻止未经授权的修改和未经授权的启动，我们需要对 /boot/grub2/grub.cfg 文件进行更改</span><br><span class="line"></span><br><span class="line">打开文件并使用密码搜索需要保护的启动条目，它以menuentry开头。找到条目后，从中删除 --unrestricted 参数</span><br><span class="line"></span><br><span class="line">(<span class="number">3</span>) reboot 重启验证，只有当输入正确的用户名和密码时，才能进入 grub 菜单或者修改引导条目。</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#添加grub2密码,会生在一个配置文件</span></span><br><span class="line">[root@centos8 ~]#grub2-setpassword</span><br><span class="line">Enter password:</span><br><span class="line">Confirm password:</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> -l /boot/grub2/user.cfg</span><br><span class="line">-rw------- 1 root root 298 Jan 19 18:20 /boot/grub2/user.cfg</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> /boot/grub2/user.cfg</span><br><span class="line">GRUB2_PASSWORD=grub.pbkdf2.sha512.10000.60AAA29A65F4DC77E8861EF25BDE2034C9B30CE1</span><br><span class="line">E07EE688D7F30460E7E87E7356B0893A6DFFB250B27D2EB9D3ED3E9207199C494D7882E2E8C772C8</span><br><span class="line">2E2DDB7A.5E42FD69FA04293DECD68F077E83875A8E4572A7FBB89BA9F161B15EAFE54FBA963FE5D</span><br><span class="line">52E16764944823396231803E5118DA1D9CAF3EB73C175A7D7A3682A90</span><br><span class="line"></span><br><span class="line"><span class="comment">#清空grub密码</span></span><br><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> /dev/null &gt; /boot/grub2/user.cfg</span><br><span class="line"></span><br><span class="line"><span class="comment">#或者直接删除文件</span></span><br><span class="line">[root@centos8 ~]#<span class="built_in">rm</span> -f /boot/grub2/user.cfg</span><br></pre></td></tr></table></figure>
+
+<p>Ubuntu</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# grub-mkpasswd-pbkdf2</span><br><span class="line">Enter password:</span><br><span class="line">Reenter password:</span><br><span class="line">PBKDF2 <span class="built_in">hash</span> of your password is</span><br><span class="line">grub.pbkdf2.sha512.10000.DE4B1993A5CB6504E9DA91746673413CD4C3B3FD390FDD4001EAD67</span><br><span class="line">2DE281448CF2AF64000B95C378D7948E2243771A45E10E1B99FF879C4F8F08EDDA25C5536.331999</span><br><span class="line">A3DFD5ECF205440CBBC48B2B1A2F4D08BB8731FA00E03ADBA990C228AD4D3D5D515EAED2350B20DB</span><br><span class="line">F74810700A2E0003FAEF3E5F25D24E877385A3714F</span><br><span class="line"></span><br><span class="line"><span class="comment">#修改此文件，将上述生成的内容追加到该文件最后</span></span><br><span class="line">[root@ubuntu ~]# vim /etc/grub.d/40_custom</span><br><span class="line"><span class="built_in">set</span> superusers=<span class="string">&quot;tom&quot;</span></span><br><span class="line">password_pbkdf2 tom</span><br><span class="line">grub.pbkdf2.sha512.10000.DE4B1993A5CB6504E9DA91746673413CD4C3B3FD390FDD4001EAD67</span><br><span class="line">2DE281448CF2AF64000B95C378D7948E2243771A45E10E1B99FF879C4F8F08EDDA25C5536.331999</span><br><span class="line">A3DFD5ECF205440CBBC48B2B1A2F4D08BB8731FA00E03ADBA990C228AD4D3D5D515EAED2350B20DB</span><br><span class="line">F74810700A2E0003FAEF3E5F25D24E877385A3714F</span><br><span class="line"></span><br><span class="line"><span class="comment">#更新</span></span><br><span class="line">[root@ubuntu ~]# update-grub</span><br><span class="line"><span class="comment">#重启，下次再选择grub,要输入用户名和密码</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="2-5-GRUB2故障修复"><a href="#2-5-GRUB2故障修复" class="headerlink" title="2.5 GRUB2故障修复"></a>2.5 GRUB2故障修复</h2><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/rumil/article/details/130537642">Linux下的grub2引导修复</a></p>
+<p>主要配置文件：&#x2F;boot&#x2F;grub2&#x2F;grub.cfg</p>
+<p>修复配置文件：grub2-mkconfig &gt; &#x2F;boot&#x2F;grub2&#x2F;grub.cfg</p>
+<p>案例1：CentOS 7,8 破坏MBR后进行恢复</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">dd</span> <span class="keyword">if</span>=/dev/zero of=/dev/sda bs=1 count=446</span><br><span class="line">光盘进入救援模式</span><br><span class="line">grub2-install --root-directory=/mnt/sysimage /dev/sda</span><br></pre></td></tr></table></figure>
+
+<p>案例2：CentOS 7,8 删除 &#x2F;boot&#x2F;grub2&#x2F; 所有内容进行恢复，即第1阶段或第1.5阶段二进制数据损失，重装 grub2 即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#光盘进入救援模式</span></span><br><span class="line"><span class="built_in">chroot</span> /mnt/sysimage</span><br><span class="line">grub2-install /dev/sda</span><br><span class="line">grub2-mkconfig -o /boot/grub2/grub.cfg</span><br></pre></td></tr></table></figure>
+
+<p>案例3：CentOS 7,8 删除 &#x2F;boot&#x2F; 下所有文件，即第二阶段，则要重装内核，重装grub2，并重新生成配置文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#删除/boot/下所有内容</span></span><br><span class="line">[root@rocky86 ~]# <span class="built_in">rm</span> -rf /boot/*</span><br><span class="line">[root@rocky86 ~]# <span class="built_in">ls</span> /boot/</span><br><span class="line"></span><br><span class="line"><span class="comment">#重启，从光盘启动，进救援模式</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#切根</span></span><br><span class="line"><span class="built_in">chroot</span> /mnt/sysimage  <span class="comment">#centos7</span></span><br><span class="line"><span class="built_in">chroot</span> /mnt/sysroot   <span class="comment">#centos8</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#安装grub2，特别说明：Centos8 必须先修复grub，再安装kernel,否则安装kernel-core时会提示grub出错</span></span><br><span class="line">grub2-install /dev/sda <span class="comment">#BIOS环境</span></span><br><span class="line">grub2-install          <span class="comment">#UEFI环境</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#挂载光盘</span></span><br><span class="line">mount /dev/sr0 /mnt</span><br><span class="line"></span><br><span class="line"><span class="comment">#安装内核</span></span><br><span class="line">rpm –ivh /mnt/Packages/kernel-3.10.0-1062.el7.x86_64.rpm --force                  <span class="comment">#centos7</span></span><br><span class="line">rpm -ivh /mnt/BaseOS/Packages/k/kernel-core-4.18.0-372.9.1.el8.x86_64.rpm --force <span class="comment">#centos8</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#生成配置文件</span></span><br><span class="line">grub2-mkconfig -o /boot/grub2/grub.cfg</span><br><span class="line"></span><br><span class="line"><span class="comment">#重启</span></span><br><span class="line"><span class="built_in">exit</span></span><br><span class="line">reboot</span><br></pre></td></tr></table></figure>
+
+<h2 id="2-6-重置root密码"><a href="#2-6-重置root密码" class="headerlink" title="2.6 重置root密码"></a>2.6 重置root密码</h2><h3 id="2-6-1-CentOS-7后"><a href="#2-6-1-CentOS-7后" class="headerlink" title="2.6.1 CentOS 7后"></a>2.6.1 CentOS 7后</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#1、进入bios、从光盘启动</span></span><br><span class="line"><span class="comment">#2、点击Troubleshooting</span></span><br><span class="line"><span class="comment">#3、进入到Troubleshooting界面</span></span><br><span class="line">选择：Rescue a CentOS Linux system</span><br><span class="line"></span><br><span class="line"><span class="comment">#4、三:进入到Rescue选项   按 ENTER键 选1 ，其他选项意思如下</span></span><br><span class="line"><span class="number">1</span>)<span class="keyword">continue</span>:救援模式程序会自动查找系统中已有的文件系统，并可读写挂载到/mnt/sysimage目录下。</span><br><span class="line"><span class="number">2</span>)Read-Only:会以只读的方式挂载已有的文件系统。</span><br><span class="line"><span class="number">3</span>)Skip to shell: 手动挂载</span><br><span class="line"></span><br><span class="line"><span class="comment">#5、sh切换bash模式</span></span><br><span class="line">chroot /mnt/sysimage/</span><br><span class="line"></span><br><span class="line"><span class="comment">#6、执行命令</span></span><br><span class="line">passwd root</span><br><span class="line"></span><br><span class="line"><span class="comment">#7、如果SELinux是启用的,才需要执行下面操作,如查没有启动,不需要执行</span></span><br><span class="line">touch /.autorelabel</span><br><span class="line"></span><br><span class="line"><span class="comment">#8、退出，重启</span></span><br><span class="line">exit</span><br><span class="line">reboot</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-6-2-Ubuntu"><a href="#2-6-2-Ubuntu" class="headerlink" title="2.6.2 Ubuntu"></a>2.6.2 Ubuntu</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">开机shift键，看到下面界面</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/kernel-manage/1753757572163-4c134765-2ff2-4896-8074-948ae3ce91bf.png" alt="null"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">按下面的提示，按e键，进入下面界面</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/kernel-manage/1753757572235-08928bf8-6eb5-4d1b-8369-76b7827c1633.png" alt="null"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">修改上面的linux开头的行，为下面形式： rw init=/bin/bash</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/kernel-manage/1753757572339-a798a381-2940-44b6-a173-8aace1f24e51.png" alt="null"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">按下面提示，按ctrl-x或者F10键，进入下面界面</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/kernel-manage/1753757572401-bf60e7ad-d03b-4451-bd1c-1d7346356b67.png" alt="null"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">执行命令passwd 直接修改密码后重启即可</span><br></pre></td></tr></table></figure>
+
+<p><img src="/Linux/kernel-manage/1753757572457-8fef94c0-458a-4b66-83a1-c8629615742a.png" alt="null"></p>
+<h2 id="2-7-调整默认启动内核"><a href="#2-7-调整默认启动内核" class="headerlink" title="2.7 调整默认启动内核"></a>2.7 调整默认启动内核</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#<span class="built_in">cat</span> /boot/grub2/grubenv</span><br><span class="line"><span class="comment"># GRUB Environment Block</span></span><br><span class="line">saved_entry=5b85fc7444b240a992c42ce2a9f65db5-5.6.12-wanglinux-6.6.6</span><br><span class="line">kernelopts=root=UUID=f7f53add-b184-4ddc-8d2c-5263b84d1e15 ro crashkernel=auto</span><br><span class="line">resume=UUID=eebe3bc7-6d52-4ad9-86aa-916f1a123fd4 rhgb quiet net.ifnames=0</span><br><span class="line">boot_success=0</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> /boot/loader/entries/</span><br><span class="line">5b85fc7444b240a992c42ce2a9f65db5-0-rescue.conf</span><br><span class="line">5b85fc7444b240a992c42ce2a9f65db5-4.18.0-147.el8.x86_64.conf</span><br><span class="line">5b85fc7444b240a992c42ce2a9f65db5-5.6.12-wanglinux-6.6.6.conf</span><br><span class="line"></span><br><span class="line"><span class="comment">#以下命令是修改 /boot/grub2/grubenv 实现</span></span><br><span class="line">[root@centos8 ~]#grub2-set-default 1</span><br></pre></td></tr></table></figure>
+
+<h1 id="3-根文件系统"><a href="#3-根文件系统" class="headerlink" title="3 根文件系统"></a>3 根文件系统</h1><p>根文件系统（rootfs）是 Linux 内核启动时挂载的第一个文件系统，是系统运行的基础。它并非仅基于内存（注：早期启动阶段可能使用临时内存文件系统如 initramfs 辅助，但最终根文件系统通常位于磁盘等存储设备），其核心作用包括：提供内核启动必需的文件（如内核映像依赖的关键配置）、包含初始化系统的脚本（如 systemd 进程、rcS、inittab 等）、提供根目录 “&#x2F;” 及 &#x2F;bin、&#x2F;sbin 等目录下的基础命令（如 ls、cd）和 &#x2F;lib 目录下的库文件，以及存储挂载其他文件系统所需的配置（如 &#x2F;etc&#x2F;fstab）。</p>
+<p>作为所有文件系统的 “根”，它是其他文件系统挂载的基础 —— 只有成功挂载根文件系统，系统才能继续启动并加载后续文件系统；若挂载失败，系统会启动出错。Linux 启动流程中，早期可能通过内存文件系统临时过渡，待磁盘驱动和文件系统加载完成后，会将根目录从临时内存文件系统切换到实际的根文件系统。总之，Linux 系统仅靠内核无法独立工作，必须配合根文件系统中的配置、命令和库文件，才能完成初始化并正常运行。</p>
+<h1 id="4-加载kernel"><a href="#4-加载kernel" class="headerlink" title="4 加载kernel"></a>4 加载kernel</h1><p>Linux 内核启动时需完成自身初始化，过程包括：探测硬件设备、加载硬件驱动程序（依赖 initramfs&#x2F;ramdisk 临时提供驱动，避免依赖根文件系统）、以只读方式挂载根文件系统，最终运行用户空间第一个程序 <code>/sbin/init</code>（现在被systemd替代）。Linux 内核执行文件一般会放在 &#x2F;boot 目录下，文件名类似 vmlinuz*，如下</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu2204:~# ll /boot/ |grep vm</span><br><span class="line">lrwxrwxrwx  1 root root        26 Jun 20 16:03 vmlinuz -&gt; vmlinuz-5.15.0-142-generic</span><br><span class="line">-rw-------  1 root root  11704776 May 19 10:36 vmlinuz-5.15.0-142-generic</span><br><span class="line">lrwxrwxrwx  1 root root        26 Jun 20 16:03 vmlinuz.old -&gt; vmlinuz-5.15.0-142-generic</span><br><span class="line"></span><br><span class="line">[root@rocky9 ~]#ll /boot/ |grep vm</span><br><span class="line">-rwxr-xr-x. 1 root root 14916424 Jun 22 14:02 vmlinuz-0-rescue-b7a30c2fbcc04db982247dad4c877914</span><br><span class="line">-rwxr-xr-x. 1 root root 14916424 May 24 07:01 vmlinuz-5.14.0-570.17.1.el9_6.x86_64</span><br></pre></td></tr></table></figure>
+
+<p>关于根文件系统与驱动的依赖问题，实际逻辑是：根文件系统的驱动（如 ext4、xfs 等）若仅存在于根文件系统中，会导致 “加载根文件系统需驱动，而驱动又在根文件系统内” 的循环依赖。解决方案并非将 <code>/boot</code> 作为独立文件系统（<code>/boot</code> 本质是根文件系统的一部分，用于存放内核、GRUB 等引导文件），而是通过 initramfs（初始化内存盘）—— 这是一个临时的内存文件系统，包含启动阶段必需的文件系统驱动和工具，内核启动时先加载 initramfs，借助其中的驱动完成根文件系统的挂载，从而打破循环依赖。</p>
+<p>Linux 内核具有模块化特性，支持 <code>.ko</code> 格式的内核模块（如文件系统、硬件驱动等）动态装载和卸载，模块可配置为 “按需加载（m）” 或 “强制集成在内核中（y）”。其核心功能包括进程管理、内存管理、网络管理、驱动程序、文件系统及安全功能等，采用 “宏内核（monolithic kernel）” 设计 —— 虽将所有系统服务集成于内核，但通过模块化实现了动态扩展，吸收了微内核的灵活性；而微内核（如 Windows、HarmonyOS 采用）则将多数功能放在用户态，虽简化内核但性能较差。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#grep -i ext4 /boot/config-5.4.0-166-generic </span><br><span class="line">CONFIG_EXT4_FS=y</span><br><span class="line">CONFIG_EXT4_USE_FOR_EXT2=y</span><br><span class="line">CONFIG_EXT4_FS_POSIX_ACL=y</span><br><span class="line">CONFIG_EXT4_FS_SECURITY=y</span><br><span class="line"></span><br><span class="line">[root@ubuntu2004 ~]#grep -i ntfs /boot/config-5.4.0-167-generic </span><br><span class="line">CONFIG_NTFS_FS=m</span><br><span class="line"><span class="comment"># CONFIG_NTFS_DEBUG is not set</span></span><br><span class="line"><span class="comment"># CONFIG_NTFS_RW is not set</span></span><br></pre></td></tr></table></figure>
+
+<p>所以完整的 Linux 系统由两部分组成：内核（kernel）负责核心功能实现；根文件系统（rootfs）包含二进制执行程序、glibc 库（提供函数集合及调用接口）等，为用户空间程序提供运行环境。两者协同工作，缺一不可。</p>
+<h2 id="4-1-lsmod命令"><a href="#4-1-lsmod命令" class="headerlink" title="4.1 lsmod命令"></a>4.1 lsmod命令</h2><p>查看当前已加载的内核模块</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky9 ~]#lsmod</span><br><span class="line">Module                  Size  Used by</span><br><span class="line">tls                   159744  0</span><br><span class="line">nft_fib_inet           12288  0</span><br><span class="line">nft_fib_ipv4           12288  1 nft_fib_inet</span><br><span class="line">nft_fib_ipv6           12288  1 nft_fib_inet</span><br><span class="line">nft_fib                12288  3 nft_fib_ipv6,nft_fib_ipv4,nft_fib_inet</span><br><span class="line">nft_reject_inet        12288  0</span><br><span class="line">nf_reject_ipv4         16384  1 nft_reject_inet</span><br><span class="line">nf_reject_ipv6         24576  1 nft_reject_inet</span><br><span class="line">nft_reject             12288  1 nft_reject_inet</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>Module</code>：模块名称；</li>
+<li><code>Size</code>：模块占用内存大小（字节）；</li>
+<li><code>Used by</code>：引用该模块的模块数（数字）及具体模块名称（若有）。</li>
+</ul>
+<h2 id="4-2-modinfo命令"><a href="#4-2-modinfo命令" class="headerlink" title="4.2 modinfo命令"></a>4.2 modinfo命令</h2><p>查询内核模块的详细信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu2004 ~]#modinfo ext4</span><br><span class="line">name:           ext4</span><br><span class="line">filename:       (<span class="built_in">builtin</span>)		<span class="comment">#集成在内核，因为值为y，强制集成在内核中</span></span><br><span class="line">softdep:        pre: crc32c	</span><br><span class="line">license:        GPL</span><br><span class="line">description:    Fourth Extended Filesystem</span><br><span class="line">author:         Remy Card, Stephen Tweedie, Andrew Morton, Andreas Dilger, Theodore Ts<span class="string">&#x27;o and others</span></span><br><span class="line"><span class="string">alias:          fs-ext4</span></span><br><span class="line"><span class="string">alias:          ext3</span></span><br><span class="line"><span class="string">alias:          fs-ext3</span></span><br><span class="line"><span class="string">alias:          ext2</span></span><br><span class="line"><span class="string">alias:          fs-ext2</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">[root@ubuntu2004 ~]#modinfo ntfs</span></span><br><span class="line"><span class="string">filename:       /lib/modules/5.4.0-166-generic/kernel/fs/ntfs/ntfs.ko	 #单独的文件，因为值为m，按需加载</span></span><br><span class="line"><span class="string">license:        GPL</span></span><br><span class="line"><span class="string">version:        2.1.32</span></span><br><span class="line"><span class="string">description:    NTFS 1.2/3.x driver - Copyright (c) 2001-2014 Anton Altaparmakov and Tuxera Inc.</span></span><br><span class="line"><span class="string">author:         Anton Altaparmakov &lt;anton@tuxera.com&gt;</span></span><br><span class="line"><span class="string">alias:          fs-ntfs</span></span><br><span class="line"><span class="string">srcversion:     6C7B16106E7029F585BF2BA</span></span><br><span class="line"><span class="string">depends:        </span></span><br><span class="line"><span class="string">retpoline:      Y</span></span><br><span class="line"><span class="string">intree:         Y</span></span><br><span class="line"><span class="string">name:           ntfs</span></span><br><span class="line"><span class="string">vermagic:       5.4.0-166-generic SMP mod_unload modversions</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-3-modprobe命令"><a href="#4-3-modprobe命令" class="headerlink" title="4.3 modprobe命令"></a>4.3 modprobe命令</h2><p>手动加载还没加载的按需加载的模块</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">modprobe nfs</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-4-rmmod命令"><a href="#4-4-rmmod命令" class="headerlink" title="4.4 rmmod命令"></a>4.4 rmmod命令</h2><p>卸载已加载的内核模块</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rmmod nfs</span><br></pre></td></tr></table></figure>
+
+<h1 id="5-systemd初始化"><a href="#5-systemd初始化" class="headerlink" title="5 systemd初始化"></a>5 systemd初始化</h1><p>内核启动（己被载入内存，开始运行，并己经初始化了所有设备驱动和数据结构等）之后，就通过启动一个用户级的程序来完成引导进程。而systemd进程（早期是init）就是一个由内核启动的第一个用户级进程，进程树的树根，即1号进程</p>
+<h2 id="5-1-systemd介绍"><a href="#5-1-systemd介绍" class="headerlink" title="5.1 systemd介绍"></a>5.1 systemd介绍</h2><p>Systemd：从 CentOS 7 版本之后开始用 systemd 实现init进程，系统启动和服务器守护进程管理器，负责在系统启动或运行时，激活系统资源，服务器进程和其它进程</p>
+<p>systemd 核心概念：unit，表示不同类型的systemd对象，通过配置文件进行标识和配置，文件中主要包含了系统服务、监听socket、保存的系统快照以及其它与init相关的信息，使用 <code>systemctl -t help</code> 命令可以查看unit类型</p>
+<ul>
+<li><p>service unit:：用于定义系统服务</p>
+</li>
+<li><p>Socket unit:：定义进程间通信用的socket文件，也可在系统启动时，延迟启动服务，实现按需启动</p>
+</li>
+<li><p>Target unit:：不同服务的集合，用于模拟实现运行级别</p>
+</li>
+<li><p>Device unit:：用于定义内核识别的设备</p>
+</li>
+<li><p>Mount unit:：定义文件系统挂载点</p>
+</li>
+<li><p>Automount unit：文件系统的自动挂载点 </p>
+</li>
+<li><p>Snapshot unit:：管理系统快照</p>
+</li>
+<li><p>Swap unit：用于标识swap设备</p>
+</li>
+<li><p>Timer unit：用于安排激活另一个单元的计时器</p>
+</li>
+<li><p>Path unit：用于定义文件系统中的一个文件或目录使用,常用于当文件系统变化时，延迟激活服务，如：spool 目录</p>
+</li>
+<li><p>Slice unit：通过 Linux 控制组节点 (cgroups) 限制资源</p>
+</li>
+<li><p>Scope unit：systemd 总线接口的信息，常用于管理外部系统进程</p>
+</li>
+</ul>
+<p>unit 的配置文件</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/usr/lib/systemd/system <span class="comment">#每个服务最主要的启动脚本设置，类似于之前的/etc/init.d/</span></span><br><span class="line">/lib/systemd/system 		<span class="comment">#ubutun的对应目录,兼容于CentOS7,8和Ubuntu（自己写的服务脚本都放在这）</span></span><br><span class="line">/run/systemd/system 		<span class="comment">#系统执行过程中所产生的服务脚本，比上面目录优先运行</span></span><br><span class="line">/etc/systemd/system 		<span class="comment">#管理员建立的执行脚本，类似于/etc/rcN.d/Sxx的功能，比上面目录优先运行</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="5-2-systemd的分离模式"><a href="#5-2-systemd的分离模式" class="headerlink" title="5.2 systemd的分离模式"></a>5.2 systemd的分离模式</h2><p>在传统的服务管理中（init），服务程序（比如 <code>sshd</code>、<code>nginx</code>）通常需要自己负责创建 socket（例如监听 22 端口、80 端口），并在启动时就占用这些端口。即使此时没有客户端连接，服务程序也必须持续运行以持有 socket，否则端口会被释放，导致新连接无法建立。</p>
+<p>在 systemd 中，这种逻辑被拆分为两部分：</p>
+<ul>
+<li>socket 单元（<code>.socket</code> 文件）：由 systemd 自身负责创建和监听 socket（如网络端口、管道、文件描述符等），并在系统启动时就提前占用这些资源。例如，<code>sshd.socket</code> 会先于 <code>sshd.service</code> 启动，负责监听 22 端口，而此时 <code>sshd</code> 服务本身可能并未运行</li>
+<li>服务单元（<code>.service</code> 文件）：实际提供服务的程序（如 <code>sshd</code>）仅在有请求到达时（比如客户端尝试连接 22 端口），才会被 systemd 激活（启动）。当请求处理完成后，若长时间无新请求，服务程序甚至可以自动退出，释放资源，而 socket 仍由 systemd 保持监听。</li>
+</ul>
+<p>范例: systemd实现部分服务的 socket 和 service 分离</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky8 ~]#yum -y install httpd</span><br><span class="line">[root@rocky8 ~]#systemctl start httpd.socket</span><br><span class="line">[root@rocky8 ~]#systemctl is-active httpd.socket</span><br><span class="line">active</span><br><span class="line">[root@rocky8 ~]#systemctl is-active httpd.service</span><br><span class="line">inactive</span><br><span class="line">[root@rocky8 ~]#ss -ntlp |grep :80</span><br><span class="line">LISTEN 0    128        *:80       *:*  <span class="built_in">users</span>:((&quot;systemd&quot;,pid=<span class="number">1</span>,fd=<span class="number">32</span>))</span><br><span class="line"></span><br><span class="line"><span class="comment">#访问httpd的socket,自动激活service</span></span><br><span class="line">[root@rocky8 ~]#curl 127.0.0.1</span><br><span class="line">[root@rocky8 ~]#systemctl is-active httpd.service</span><br><span class="line">active</span><br><span class="line">[root@rocky8 ~]#ss -ntlp |grep :80</span><br><span class="line">LISTEN 0    128        *:80       *:*  <span class="built_in">users</span>:</span><br><span class="line">((&quot;httpd&quot;,pid=<span class="number">16775</span>,fd=<span class="number">3</span>),(&quot;httpd&quot;,pid=<span class="number">16774</span>,fd=<span class="number">3</span>),(&quot;httpd&quot;,pid=<span class="number">16773</span>,fd=<span class="number">3</span>),</span><br><span class="line">(&quot;httpd&quot;,pid=<span class="number">16771</span>,fd=<span class="number">3</span>),(&quot;systemd&quot;,pid=<span class="number">1</span>,fd=<span class="number">32</span>))</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-3-启动级别"><a href="#5-3-启动级别" class="headerlink" title="5.3 启动级别"></a>5.3 启动级别</h2><p>Linux分为7个启动级别：</p>
+<ul>
+<li>运行级别0：系统停机状态，系统默认运行级别不能设为0，否则不能正常启动</li>
+<li>运行级别1：单用户工作状态，root权限，用于系统维护，禁止远程登陆</li>
+<li>运行级别2：多用户状态(没有NFS)</li>
+<li>运行级别3：完全的多用户状态(有NFS)，登陆后进入控制台命令行模式</li>
+<li>运行级别4：系统未使用，保留</li>
+<li>运行级别5：X11控制台，登陆后进入图形GUI模式</li>
+<li>运行级别6：系统正常关闭并重启，默认运行级别不能设为6，否则不能正常启动</li>
+</ul>
+<p>这些启动级别何时加载的呢？</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1.加电自检(BIOS)</span></span><br><span class="line"><span class="comment"># 2.MBR引导 (512k)  dd &lt;/dev/zero &gt;/dev/sda bs=1k count=400 </span></span><br><span class="line"><span class="comment"># 3.GRUB2菜单(选择系统)</span></span><br><span class="line"><span class="comment"># 4.运行systemd</span></span><br><span class="line">- 检查/etc/systemd/system/default.target -&gt; /usr/lib/systemd/system/multi-user.target</span><br><span class="line">- 找到/etc/systemd/system/multi-user.target.wants/所有服务，并启动 <span class="comment"># 5.建立终端</span></span><br><span class="line"><span class="comment"># 6.用户登录</span></span><br><span class="line"></span><br><span class="line"><span class="comment">## 运行级别: </span></span><br><span class="line">- 0:关机 poweroff.target</span><br><span class="line">- 1:单用户模式 rescue.target</span><br><span class="line">- 2:多用户模式(没有文件系统，没有网络) multi-user.target</span><br><span class="line">- 3:多用户模式(命令行) multi-user.target</span><br><span class="line">- 4:没有被使用 multi-user.target</span><br><span class="line">- 5:图形化界面 graphical.target</span><br><span class="line">- 6:重启 reboot.target</span><br></pre></td></tr></table></figure>
+
+<p>设置与获取启动级别</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#获取默认启动的target</span></span><br><span class="line">systemctl get-default</span><br><span class="line"></span><br><span class="line"><span class="comment">#设置默认启动的target</span></span><br><span class="line">systemctl set-default graphical.target</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-1-红帽系统"><a href="#5-3-1-红帽系统" class="headerlink" title="5.3.1 红帽系统"></a>5.3.1 红帽系统</h3><p>Centos7后，完全采用 <code>systemd</code> 作为初始化系统，在 <code>systemd</code> 中，运行级别被 target 替代，不再保留传统的 <code>/etc/rc0.d</code> 到 <code>/etc/rc6.d</code> 等按运行级别划分的目录，虽然还存在<code>/etc/rc.d</code> 单一目录，只不过是为了兼容传统场景而保留的</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">[root@rocky9 ~]#ll /lib/systemd/system/*.target</span><br><span class="line">lrwxrwxrwx. 1 root root  13 Apr 24 14:27 /lib/systemd/system/ctrl-alt-del.target -&gt; reboot.target</span><br><span class="line">lrwxrwxrwx. 1 root root  16 Apr 24 14:27 /lib/systemd/system/default.target -&gt; graphical.target</span><br><span class="line">lrwxrwxrwx. 1 root root  15 Apr 24 14:27 /lib/systemd/system/runlevel0.target -&gt; poweroff.target</span><br><span class="line">lrwxrwxrwx. 1 root root  13 Apr 24 14:27 /lib/systemd/system/runlevel1.target -&gt; rescue.target</span><br><span class="line">lrwxrwxrwx. 1 root root  17 Apr 24 14:27 /lib/systemd/system/runlevel2.target -&gt; multi-user.target</span><br><span class="line">lrwxrwxrwx. 1 root root  17 Apr 24 14:27 /lib/systemd/system/runlevel3.target -&gt; multi-user.target</span><br><span class="line">lrwxrwxrwx. 1 root root  17 Apr 24 14:27 /lib/systemd/system/runlevel4.target -&gt; multi-user.target</span><br><span class="line">lrwxrwxrwx. 1 root root  16 Apr 24 14:27 /lib/systemd/system/runlevel5.target -&gt; graphical.target</span><br><span class="line">lrwxrwxrwx. 1 root root  13 Apr 24 14:27 /lib/systemd/system/runlevel6.target -&gt; reboot.target</span><br><span class="line">....</span><br></pre></td></tr></table></figure>
+
+<p>和运行级别的对应关系</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">0  ==&gt; runlevel0.target, poweroff.target</span><br><span class="line">1  ==&gt; runlevel1.target, rescue.target</span><br><span class="line">2  ==&gt; runlevel2.target, multi-user.target</span><br><span class="line">3  ==&gt; runlevel3.target, multi-user.target</span><br><span class="line">4  ==&gt; runlevel4.target, multi-user.target</span><br><span class="line">5  ==&gt; runlevel5.target, graphical.target</span><br><span class="line">6  ==&gt; runlevel6.target, reboot.target</span><br></pre></td></tr></table></figure>
+
+<p>范例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 系统目标（target）与运行级别管理</span></span><br><span class="line">systemctl list-dependencies graphical.target    <span class="comment"># 查看指定 target 的依赖单元</span></span><br><span class="line">systemctl isolate graphical.target              <span class="comment"># 切换到指定 target（需 AllowIsolate=yes）</span></span><br><span class="line">                                                <span class="comment"># 注意：修改 .target 文件后需执行 systemctl daemon-reload</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 系统关机与重启</span></span><br><span class="line">systemctl halt      <span class="comment"># 停止系统（不关闭电源）</span></span><br><span class="line">systemctl poweroff  <span class="comment"># 关闭系统并切断电源</span></span><br><span class="line">systemctl reboot    <span class="comment"># 重启系统</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 系统挂起与休眠</span></span><br><span class="line">systemctl <span class="built_in">suspend</span>       <span class="comment"># 挂起（Suspend to RAM）</span></span><br><span class="line">systemctl hibernate     <span class="comment"># 休眠（Suspend to Disk）</span></span><br><span class="line">systemctl hybrid-sleep  <span class="comment"># 混合休眠（同时挂起到内存和磁盘）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 模式切换</span></span><br><span class="line">systemctl rescue    <span class="comment"># 切换到救援模式（Rescue Mode），使用最小化服务集</span></span><br><span class="line">systemctl emergency <span class="comment"># 切换到紧急模式（Emergency Mode），仅启动最基本功能，无服务启动</span></span><br></pre></td></tr></table></figure>
+
+<p>范例：禁用ctrl+alt+delete 重启快捷键</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#<span class="built_in">ls</span> -l /lib/systemd/system/ctrl-alt-del.target  </span><br><span class="line">lrwxrwxrwx. 1 root root 13 May 23  2019 /lib/systemd/system/ctrl-alt-del.target-&gt; reboot.target</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#systemctl mask ctrl-alt-del.target</span><br><span class="line">Created symlink /etc/systemd/system/ctrl-alt-del.target → /dev/null.</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#init q</span><br><span class="line">[root@centos8 ~]#systemctl daemon-reload</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-2-Ubuntu"><a href="#5-3-2-Ubuntu" class="headerlink" title="5.3.2 Ubuntu"></a>5.3.2 Ubuntu</h3><p>Ubuntu虽然默认使用 <code>systemd</code> 作为初始化系统，但为了兼容传统的机制，仍然保留了 <code>/etc/rc0.d</code> 到 <code>/etc/rc6.d</code> 以及 <code>/etc/rcS.d</code> 这些目录</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">root@ubuntu2204:~# ll /etc/rc*.d -d</span><br><span class="line">drwxr-xr-x 2 root root 267 Apr 21  2022 /etc/rc0.d/</span><br><span class="line">drwxr-xr-x 2 root root 169 Apr 21  2022 /etc/rc1.d/</span><br><span class="line">drwxr-xr-x 2 root root 292 Jun 20 16:03 /etc/rc2.d/</span><br><span class="line">drwxr-xr-x 2 root root 292 Jun 20 16:03 /etc/rc3.d/</span><br><span class="line">drwxr-xr-x 2 root root 292 Jun 20 16:03 /etc/rc4.d/</span><br><span class="line">drwxr-xr-x 2 root root 292 Jun 20 16:03 /etc/rc5.d/</span><br><span class="line">drwxr-xr-x 2 root root 267 Apr 21  2022 /etc/rc6.d/</span><br><span class="line">drwxr-xr-x 2 root root 263 Apr 21  2022 /etc/rcS.d/</span><br></pre></td></tr></table></figure>
+
+<p>说明：</p>
+<ul>
+<li>K: K##：表示关闭服务，##运行次序；数字越小，越先运行，越先被停止，这类服务通常是要依赖其它服务</li>
+<li>S: S##：表示开启服务，##运行次序；数字越小，越先运行，越先被启动，这类服务通常是要被其它服务依赖</li>
+</ul>
+<h2 id="5-4-systemctl命令"><a href="#5-4-systemctl命令" class="headerlink" title="5.4 systemctl命令"></a>5.4 systemctl命令</h2><p>管理系统服务service unit</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl COMMAND name1.service [name2.service]...</span><br></pre></td></tr></table></figure>
+
+<p>服务状态</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">loaded Unit			<span class="comment">#配置文件已处理</span></span><br><span class="line">active(running) <span class="comment">#一次或多次持续处理的运行</span></span><br><span class="line">active(exited) 	<span class="comment">#成功完成一次性的配置</span></span><br><span class="line">active(waiting) <span class="comment">#运行中，等待一个事件</span></span><br><span class="line">inactive 				<span class="comment">#不运行</span></span><br><span class="line">enabled 				<span class="comment">#开机启动</span></span><br><span class="line">disabled 				<span class="comment">#开机不启动</span></span><br><span class="line">static 					<span class="comment">#开机不启动，但可被另一个启用的服务激活</span></span><br><span class="line">indirect 				<span class="comment">#重定向到别处</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#使用该查看更多显示状态</span></span><br><span class="line">systemctl list-unit-files --<span class="built_in">type</span> service --all</span><br></pre></td></tr></table></figure>
+
+<p>systemctl 命令示例</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 单元状态查看</span></span><br><span class="line">systemctl                          <span class="comment"># 显示所有活动单元状态（默认）</span></span><br><span class="line">systemctl list-units               <span class="comment"># 同上，显示所有活动单元</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 服务状态查看</span></span><br><span class="line">systemctl --<span class="built_in">type</span>=service           <span class="comment"># 显示所有活动的服务单元</span></span><br><span class="line">systemctl list-units --<span class="built_in">type</span>=service --all   <span class="comment"># 显示所有服务单元（包括非活动）</span></span><br><span class="line">systemctl status sshd.service      <span class="comment"># 查看指定服务详细状态</span></span><br><span class="line">systemctl --l status sshd.service  <span class="comment"># 同上，显示完整输出（-l 表示 --full）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 服务活动状态判断</span></span><br><span class="line">systemctl is-active sshd.service   <span class="comment"># 检查服务当前是否处于激活（运行）状态</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 服务启停控制</span></span><br><span class="line">systemctl start sshd.service       <span class="comment"># 启动服务</span></span><br><span class="line">systemctl stop sshd.service        <span class="comment"># 停止服务</span></span><br><span class="line">systemctl restart sshd.service     <span class="comment"># 重启服务</span></span><br><span class="line">systemctl reload sshd.service      <span class="comment"># 重新加载配置（不中断服务）</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 开机自启管理</span></span><br><span class="line">systemctl <span class="built_in">enable</span> sshd.service      <span class="comment"># 设置服务开机自启</span></span><br><span class="line">systemctl <span class="built_in">disable</span> sshd.service     <span class="comment"># 禁用开机自启</span></span><br><span class="line">systemctl is-enabled sshd.service  <span class="comment"># 查看服务是否设置为开机自启</span></span><br><span class="line">systemctl list-unit-files --<span class="built_in">type</span>=service  <span class="comment"># 列出所有服务的启用/禁用状态</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 立即生效的启用/禁用</span></span><br><span class="line">systemctl <span class="built_in">enable</span> --now network     <span class="comment"># 开机自启并立即启动服务</span></span><br><span class="line">systemctl <span class="built_in">disable</span> --now network    <span class="comment"># 禁止开机自启并立即停止服务</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 服务屏蔽与解除</span></span><br><span class="line">systemctl mask network.service     <span class="comment"># 屏蔽服务：禁止手动和自动启动（创建指向 /dev/null 的符号链接）</span></span><br><span class="line">systemctl unmask network.service   <span class="comment"># 解除屏蔽：恢复服务正常启动能力</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 依赖关系查看</span></span><br><span class="line">systemctl list-dependencies sshd.service  <span class="comment"># 列出服务的依赖单元</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置文件查看</span></span><br><span class="line">systemctl <span class="built_in">cat</span> sshd.service         <span class="comment"># 查看服务单元文件的实际内容</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 失败服务查询</span></span><br><span class="line">systemctl --failed --<span class="built_in">type</span>=service  <span class="comment"># 列出当前处于失败状态的服务</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 杀掉服务进程</span></span><br><span class="line">systemctl <span class="built_in">kill</span> unitname            <span class="comment"># 向服务发送信号以终止其进程</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="5-5-systemctl管理脚本"><a href="#5-5-systemctl管理脚本" class="headerlink" title="5.5 systemctl管理脚本"></a>5.5 systemctl管理脚本</h2><p>systemctl脚本存放在：<code>/usr/lib/systemd/</code>，有系统（system）和用户（user）之分</p>
+<ul>
+<li><code>/usr/lib/systemd/system</code> ：系统服务，开机不需要登陆就能运行的程序（相当于开机自启）</li>
+<li><code>/usr/lib/systemd/user</code> ：用户服务，需要登录后才能运行的程序</li>
+</ul>
+<p>usr&#x2F;lib&#x2F;systemd&#x2F;目录下又存在两种类型的文件：</p>
+<ul>
+<li><code>*.service</code> ：服务unit文件</li>
+<li><code>*.target</code> ：开机级别unit</li>
+</ul>
+<p>service unit文件格式</p>
+<ul>
+<li>以 “#” 开头的行后面的内容会被认为是注释</li>
+<li>相关布尔值，1、yes、on、true 都是开启，0、no、off、false 都是关闭</li>
+<li>时间单位默认是秒，所以毫秒（ms）分钟（m）等须显式说明</li>
+</ul>
+<p>service unit file文件通常由三部分组成</p>
+<ul>
+<li>[Unit]：定义与Unit类型无关的通用选项，主要提供unit的描述信息、unit行为及依赖关系等</li>
+<li>[Service]：与特定类型相关的专用选项</li>
+<li>[Install]：用于定义服务安装（启用）后与其他目标单元（target unit）的关联关系（比如该服务属于哪个运行级别，被哪些目标依赖等），可设置为多用户的 <code>multi-user.target</code></li>
+</ul>
+<h3 id="5-5-1-Unit段的常用选项"><a href="#5-5-1-Unit段的常用选项" class="headerlink" title="5.5.1 Unit段的常用选项"></a>5.5.1 Unit段的常用选项</h3><table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>描述信息</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Description</td>
+<td>用于描述该服务的功能或用途（说明这个服务是做什么的）。</td>
+</tr>
+<tr>
+<td>After&#x2F;Before</td>
+<td>定义单元（unit）的启动次序，After表示当前单元需要在指定的单元启动后再启动，Before与之相反（After和Before字段只涉及启动顺序，不涉及依赖关系）。</td>
+</tr>
+<tr>
+<td>Requires</td>
+<td>指定当前单元所依赖的其他单元，属于强依赖关系。若被依赖的单元无法激活，当前单元也无法激活。</td>
+</tr>
+<tr>
+<td>Wants</td>
+<td>指定当前单元所依赖的其他单元，属于弱依赖关系。即使被依赖的单元无法激活，当前单元仍可尝试激活。</td>
+</tr>
+<tr>
+<td>Conflicts</td>
+<td>定义单元之间的冲突关系。若指定的单元被激活，当前单元会被停止；反之亦然。</td>
+</tr>
+</tbody></table>
+<h3 id="5-5-2-Service段的常用选项"><a href="#5-5-2-Service段的常用选项" class="headerlink" title="5.5.2 Service段的常用选项"></a>5.5.2 Service段的常用选项</h3><table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Type</td>
+<td>定义进程启动类型</td>
+</tr>
+<tr>
+<td>EnvironmentFile</td>
+<td>环境变量配置文件路径。说明：添加连词号 <code>-</code> 表示抑制错误，即发生错误时，不影响其他命令的执行，避免配置文件不存在的异常。例如：<code>EnvironmentFile=-/etc/sysconfig/elasticsearch</code></td>
+</tr>
+<tr>
+<td>PIDFile</td>
+<td>进程 ID 文件的路径</td>
+</tr>
+<tr>
+<td>ExecStart</td>
+<td>启动服务的命令 &#x2F; 脚本的绝对路径（核心）</td>
+</tr>
+<tr>
+<td>ExecStartPre</td>
+<td>ExecStart 运行前执行的命令（可多条）</td>
+</tr>
+<tr>
+<td>ExecStartPost</td>
+<td>ExecStart 运行后执行的命令（可多条）</td>
+</tr>
+<tr>
+<td>ExecReload</td>
+<td>重新加载配置的命令 &#x2F; 脚本</td>
+</tr>
+<tr>
+<td>ExecStop</td>
+<td>停止服务的命令 &#x2F; 脚本</td>
+</tr>
+<tr>
+<td>KillSignal</td>
+<td>杀死进程的信号（默认 SIGTERM）</td>
+</tr>
+<tr>
+<td>KillMode</td>
+<td>杀死进程的方式（control-group&#x2F;process&#x2F;mixed&#x2F;none）</td>
+</tr>
+<tr>
+<td>TimeoutStopSec</td>
+<td>超时后未停止则强制终止（配合 SIGKILL 等）</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td>定义服务进程退出后，systemd的重启方式，默认是不重启</td>
+</tr>
+<tr>
+<td>RestartSec</td>
+<td>重启前的暂停时间（默认 100ms，单位可指定，如 20s）</td>
+</tr>
+<tr>
+<td>PrivateTmp</td>
+<td>布尔值，是否生成私有 &#x2F;tmp 目录（true 则生成独立目录）</td>
+</tr>
+<tr>
+<td>User</td>
+<td>服务运行的用户</td>
+</tr>
+<tr>
+<td>Group</td>
+<td>服务运行的用户组</td>
+</tr>
+</tbody></table>
+<h4 id="5-5-2-1-Type类型"><a href="#5-5-2-1-Type类型" class="headerlink" title="5.5.2.1 Type类型"></a>5.5.2.1 Type类型</h4><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>simple</td>
+<td>默认值，以 ExecStart 字段启动的进程作为主进程</td>
+</tr>
+<tr>
+<td>forking</td>
+<td>ExecStart 字段以 fork () 方式启动，父进程退出后子进程成为主进程（后台运行），常用此类型</td>
+</tr>
+<tr>
+<td>oneshot</td>
+<td>类似 simple，但仅执行一次，systemd 会等待其执行完毕再启动其他服务</td>
+</tr>
+<tr>
+<td>dbus</td>
+<td>类似 simple，但需等待获取 D-Bus 信号后才启动</td>
+</tr>
+<tr>
+<td>notify</td>
+<td>类似 simple，但进程结束后会发出通知信号，systemd 收到后再启动其他服务</td>
+</tr>
+<tr>
+<td>idle</td>
+<td>类似 simple，但需等其他任务执行完毕后才启动该服务</td>
+</tr>
+</tbody></table>
+<h4 id="5-5-2-2-Killmode的类型"><a href="#5-5-2-2-Killmode的类型" class="headerlink" title="5.5.2.2 Killmode的类型"></a>5.5.2.2 Killmode的类型</h4><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>control-group（默认）</td>
+<td>当前控制组中所有的子进程都会被杀死</td>
+</tr>
+<tr>
+<td>process</td>
+<td>仅杀死主进程，不处理子进程</td>
+</tr>
+<tr>
+<td>mixed</td>
+<td>主进程收到 SIGTERM（终止信号），子进程收到 SIGKILL（无条件终止信号）</td>
+</tr>
+<tr>
+<td>none</td>
+<td>不主动杀死任何进程，仅执行服务自身定义的 stop 命令</td>
+</tr>
+</tbody></table>
+<h4 id="5-5-2-3-Restart类型"><a href="#5-5-2-3-Restart类型" class="headerlink" title="5.5.2.3 Restart类型"></a>5.5.2.3 Restart类型</h4><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>no（默认）</td>
+<td>服务退出后不进行任何重启操作</td>
+</tr>
+<tr>
+<td>on-success</td>
+<td>仅当服务正常退出（退出状态码为 0）时，才会重启</td>
+</tr>
+<tr>
+<td>on-failure</td>
+<td>服务非正常退出时重启（包括信号终止、超时等非 0 状态码的情况）。守护进程推荐使用</td>
+</tr>
+<tr>
+<td>on-abnormal</td>
+<td>仅当服务因信号终止或超时退出时，才会重启</td>
+</tr>
+<tr>
+<td>on-abort</td>
+<td>仅当服务收到未捕捉的信号导致终止时，才会重启</td>
+</tr>
+<tr>
+<td>on-watchdog</td>
+<td>仅当服务因超时（watchdog 机制触发）退出时，才会重启</td>
+</tr>
+<tr>
+<td>always</td>
+<td>无论服务以何种原因退出（正常或异常），都会重启</td>
+</tr>
+</tbody></table>
+<h4 id="5-5-2-4-各种Exec-字段"><a href="#5-5-2-4-各种Exec-字段" class="headerlink" title="5.5.2.4 各种Exec*字段"></a>5.5.2.4 各种Exec*字段</h4><p>Exec*字段后面的命令，仅接受 <code>‘指令 参数 参数..’</code> 格式，不能接受 <code>&lt;&gt; |&amp;</code> 等特殊字符，很多bash语法也不支持，如果想要支持bash语法，需要设置 <code>Tyep=oneshot</code></p>
+<p>注意：[Service]部分的启动、重启、停止命令全部要求使用绝对路径，使用相对路径则会报错</p>
+<h3 id="5-5-3-Install段的常用选项"><a href="#5-5-3-Install段的常用选项" class="headerlink" title="5.5.3 Install段的常用选项"></a>5.5.3 Install段的常用选项</h3><table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Alias</td>
+<td>服务的别名，可通过 <code>systemctl [命令] 别名.service</code> 操作该服务（如 <code>Alias=my-service.service</code>）。</td>
+</tr>
+<tr>
+<td>RequiredBy</td>
+<td>定义当前服务被哪些单元（units）强依赖。若这些单元被激活，当前服务必须同时激活；若当前服务失效，依赖它的单元也会受影响。通常用于指定服务所属的运行级别目标（如 <code>multi-user.target</code>）。</td>
+</tr>
+<tr>
+<td>WantedBy</td>
+<td>定义当前服务被哪些单元（units）弱依赖。若这些单元被激活，会尝试激活当前服务，但当前服务失效不影响依赖它的单元。常用作指定服务的默认启动目标（如 <code>graphical.target</code>）。</td>
+</tr>
+<tr>
+<td>Also</td>
+<td>安装当前服务时，同时安装（启用）指定的其他相关服务（如依赖的辅助服务）。</td>
+</tr>
+</tbody></table>
+<h3 id="5-5-4-自定义service的unit文件"><a href="#5-5-4-自定义service的unit文件" class="headerlink" title="5.5.4 自定义service的unit文件"></a>5.5.4 自定义service的unit文件</h3><p>说明：对于新创建的unit文件，或者修改了的unit文件，要使用 <code>systemctl daemon-reload</code> 通知systemd重载此配置文件，而后可以选择重启服务，如果之前没有启动过，可以直接启动</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#vim /lib/systemd/system/hello.service</span><br><span class="line">[Unit]</span><br><span class="line">Description=Hello World</span><br><span class="line"></span><br><span class="line">[Service]</span><br><span class="line">TimeoutStartSec=0</span><br><span class="line">ExecStart=/bin/sh -c <span class="string">&quot;while true; do echo Hello World; sleep 1; done&quot;</span></span><br><span class="line">ExecStop=/bin/kill sh</span><br><span class="line"></span><br><span class="line">[Install]</span><br><span class="line">WantedBy=multi-user.target</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#systemctl daemon-reload</span><br><span class="line">[root@centos8 ~]#systemctl <span class="built_in">enable</span> --now  hello</span><br><span class="line">[root@centos8 ~]#systemctl status hello</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#<span class="built_in">tail</span> /var/log/messages -f</span><br><span class="line">Hello World</span><br><span class="line">Hello World</span><br><span class="line">Hello World</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment">#上面serivce文件也可支持ubuntu</span></span><br><span class="line">[root@ubuntu1804 ~]#<span class="built_in">tail</span> /var/log/syslog</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-6-开机启动文件"><a href="#5-6-开机启动文件" class="headerlink" title="5.6 开机启动文件"></a>5.6 开机启动文件</h2><p>开机启动文件是指系统启动过程中会自动执行的文件（如脚本、配置文件等），例如：<code>/etc/rc.local</code>（传统启动脚本）、<code>systemd</code> 的服务单元文件（<code>.service</code>）、<code>/etc/fstab</code>（挂载配置文件）等，都属于开机启动文件。这些文件本身是 “被系统读取并执行” 的对象，用于定义启动时要做的操作。</p>
+<p>上述之前说明了，Centos7后 <code>rc.local</code> 被 target 替代，但仍然还保留着此文件；而Ubuntu还是跟传统的一样使用 <code>rc.local</code> 。所以我们有两种方式实现我们想开机即启动的配置</p>
+<ul>
+<li>创建 systemd 服务（推荐）</li>
+<li>在 <code>/etc/rc.local</code> 中添加，并赋予执行权限</li>
+</ul>
+<p>范例：使用 <code>/etc/rc.local</code> </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#创建测试脚本</span></span><br><span class="line">[root@ubuntu2204 ~]# vim rc-local-test.sh</span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"><span class="built_in">sleep</span> 3000</span><br><span class="line"></span><br><span class="line"><span class="comment">#加执行权限</span></span><br><span class="line">[root@ubuntu2204 ~]# <span class="built_in">chmod</span> a+x rc-local-test.sh</span><br><span class="line"></span><br><span class="line"><span class="comment">#加入开机启动</span></span><br><span class="line">[root@ubuntu2204 ~]# vim /etc/rc.local</span><br><span class="line"><span class="comment">#!/bin/sh</span></span><br><span class="line"><span class="built_in">touch</span> /var/lock/subsys/local</span><br><span class="line">/root/rc-local-test.sh</span><br><span class="line"></span><br><span class="line"><span class="comment">#重启，测试看是否启动</span></span><br><span class="line">[root@ubuntu2204 ~]# <span class="built_in">uptime</span></span><br><span class="line">19:18:33 up 1 min,  1 user, load average: 0.15, 0.04, 0.01</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]# ps aux | grep rc-local</span><br><span class="line">root    1843  0.0  0.0 108112  1244 ?    S   19:17  0:00 /bin/bash/root/rc-local-test.sh</span><br><span class="line">root    1890  0.0  0.0 103152  820 pts/1  S+  19:21  0:00 grep rc-local</span><br><span class="line"></span><br><span class="line">[root@ubuntu2204 ~]# pstree -p | grep rc-local</span><br><span class="line">   |-rc(982)---S99local(1841)---rc-local-test.s(1843)---<span class="built_in">sleep</span>(1844)</span><br></pre></td></tr></table></figure>
+
+<h1 id="6-内核参数和-proc目录管理"><a href="#6-内核参数和-proc目录管理" class="headerlink" title="6 内核参数和&#x2F;proc目录管理"></a>6 内核参数和&#x2F;proc目录管理</h1><p>内核把自己内部状态信息及统计信息，以及可配置参数通过proc伪文件系统加以输出，而sysctl 命令允许改变正在运行中的Linux系统的接口，用来配置针对整个系统的内核参数，这些参数以文件的形式显示在 <code>/proc/sys/</code> 目录中，配置项就是目录名加文件名，值就是该文件中的内容。但不是所有内核参数都是可以被修改的，有些内核参数是只读的，只有可写的内核参数才可以修改</p>
+<p>系统在启动时，会按下列顺序加载配置文件，读取参数值</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">/run/sysctl.d/*.conf</span><br><span class="line">/etc/sysctl.d/*.conf</span><br><span class="line">/usr/local/lib/sysctl.d/*.conf</span><br><span class="line">/usr/lib/sysctl.d/*.conf</span><br><span class="line">/lib/sysctl.d/*.conf</span><br><span class="line">/etc/sysctl.conf</span><br></pre></td></tr></table></figure>
+
+<p>所有内核参数都以文件形式存在于 <code>/proc/sys/</code> 目录下，这是内核在运行时向用户空间暴露的配置接口。例如，某个参数的实际路径可能是 <code>/proc/sys/xxx/yyy/zzz</code>。当使用 <code>sysctl -w</code> 临时修改参数，或在 <code>/etc/sysctl.conf</code>（及 <code>/etc/sysctl.d/</code> 下的配置文件）中永久配置参数时，不需要写完整的 <code>/proc/sys/</code> 路径，而是将路径中的 <code>/</code> 替换为 <code>.</code>，并省略开头的 <code>/proc/sys/</code>。例如，对应 <code>/proc/sys/xxx/yyy/zzz</code> 的参数，在 <code>sysctl</code> 中应表示为 <code>xxx.yyy.zzz</code>。</p>
+<ul>
+<li>临时修改：<code>sysctl -w xxx.yyy.zzz=值</code></li>
+<li>永久配置：在配置文件中写入 <code>xxx.yyy.zzz = 值</code></li>
+</ul>
+<p>sysctl命令的修改是立即生效且临时的（重启后失效），或者通过 echo 命令以重定向方式</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#修改主机名的内核参数</span></span><br><span class="line">sysctl -w kernel.hostname=<span class="built_in">test</span></span><br><span class="line"><span class="built_in">echo</span> “websrv” &gt; /proc/sys/kernel/hostname</span><br></pre></td></tr></table></figure>
+
+<p>通过修改 <code>sysctl.conf</code> 配置文件，达到永久生效。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[root@centos8 ~]#vim /etc/sysctl.conf</span><br><span class="line">net.ipv4.ip_forward=1</span><br><span class="line"></span><br><span class="line">[root@centos8 ~]#sysctl -p	<span class="comment">#生效</span></span><br></pre></td></tr></table></figure>
+
+<p>查看指定项</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# sysctl net.ipv4.ip_forward</span><br><span class="line">net.ipv4.ip_forward = 0</span><br><span class="line"></span><br><span class="line"><span class="comment">#仅显示名称</span></span><br><span class="line">[root@ubuntu ~]# sysctl -N net.ipv4.ip_forward</span><br><span class="line">net.ipv4.ip_forward</span><br><span class="line"></span><br><span class="line"><span class="comment">#仅显示值</span></span><br><span class="line">[root@ubuntu ~]# sysctl -n net.ipv4.ip_forward</span><br><span class="line">0</span><br><span class="line"></span><br><span class="line"><span class="comment">#直接查看文件内容</span></span><br><span class="line">[root@ubuntu ~]# <span class="built_in">cat</span> /proc/sys/net/ipv4/ip_forward</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+
+<p>查看所有生效参数</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[root@ubuntu ~]# sysctl -a</span><br></pre></td></tr></table></figure>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://AquaPluto.github.io">Aquarius</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://aquapluto.github.io/Linux/kernel-manage/">https://aquapluto.github.io/Linux/kernel-manage/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://AquaPluto.github.io" target="_blank">代码推演录</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/introduce/">introduce</a></div><div class="post-share"><div class="social-share" data-image="/img/paper3.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/Linux/basics/introduce/" title="linux介绍"><img class="cover" src="/img/paper6.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">linux介绍</div></div><div class="info-2"><div class="info-item-1">1 系统构成与shell核心1.1...</div></div></div></a><a class="pagination-related" href="/Middleware/OpenVPN/" title="OpenVPN"><img class="cover" src="/img/paper4.png" onerror="onerror=null;src='/img/error-page.png'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">OpenVPN</div></div><div class="info-2"><div class="info-item-1">1 OpenVPN简介1.1 VP...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avator.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Aquarius</div><div class="author-info-description">分享运维开发相关技术</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">138</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">42</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/AquaPluto"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/AquaPluto" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://blog.csdn.net/m0_75233142" target="_blank" title="CSDN"><i class="fa-solid fa-code" style="color: #8a2be2;"></i></a><a class="social-icon" href="mailto:wujunlinq@163.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content"><p>持续更新文章中，有问题请添加wx</p>
+<div>
+  <img src="/img/wx.jpg" alt="wx" style="width: 100px">
+</div>
+</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#1-linux%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B"><span class="toc-text">1 linux系统的启动流程</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-%E7%A8%8B%E5%BA%8F%E5%90%AF%E5%8A%A8%E5%8A%A0%E8%BD%BD%E5%99%A8bootloader"><span class="toc-text">2 程序启动加载器bootloader</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#2-1-GRUB2%E5%90%AF%E5%8A%A8%E9%98%B6%E6%AE%B5"><span class="toc-text">2.1 GRUB2启动阶段</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-2-GRUB2%E5%91%BD%E4%BB%A4"><span class="toc-text">2.2 GRUB2命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-3-GRUB2%E7%AE%A1%E7%90%86%E6%96%87%E4%BB%B6"><span class="toc-text">2.3 GRUB2管理文件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4-GRUB2%E5%8A%A0%E5%AF%86"><span class="toc-text">2.4 GRUB2加密</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5-GRUB2%E6%95%85%E9%9A%9C%E4%BF%AE%E5%A4%8D"><span class="toc-text">2.5 GRUB2故障修复</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-6-%E9%87%8D%E7%BD%AEroot%E5%AF%86%E7%A0%81"><span class="toc-text">2.6 重置root密码</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-6-1-CentOS-7%E5%90%8E"><span class="toc-text">2.6.1 CentOS 7后</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-6-2-Ubuntu"><span class="toc-text">2.6.2 Ubuntu</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-7-%E8%B0%83%E6%95%B4%E9%BB%98%E8%AE%A4%E5%90%AF%E5%8A%A8%E5%86%85%E6%A0%B8"><span class="toc-text">2.7 调整默认启动内核</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-%E6%A0%B9%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-text">3 根文件系统</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#4-%E5%8A%A0%E8%BD%BDkernel"><span class="toc-text">4 加载kernel</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1-lsmod%E5%91%BD%E4%BB%A4"><span class="toc-text">4.1 lsmod命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-2-modinfo%E5%91%BD%E4%BB%A4"><span class="toc-text">4.2 modinfo命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3-modprobe%E5%91%BD%E4%BB%A4"><span class="toc-text">4.3 modprobe命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-4-rmmod%E5%91%BD%E4%BB%A4"><span class="toc-text">4.4 rmmod命令</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#5-systemd%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="toc-text">5 systemd初始化</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#5-1-systemd%E4%BB%8B%E7%BB%8D"><span class="toc-text">5.1 systemd介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-2-systemd%E7%9A%84%E5%88%86%E7%A6%BB%E6%A8%A1%E5%BC%8F"><span class="toc-text">5.2 systemd的分离模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-3-%E5%90%AF%E5%8A%A8%E7%BA%A7%E5%88%AB"><span class="toc-text">5.3 启动级别</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-1-%E7%BA%A2%E5%B8%BD%E7%B3%BB%E7%BB%9F"><span class="toc-text">5.3.1 红帽系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-2-Ubuntu"><span class="toc-text">5.3.2 Ubuntu</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-4-systemctl%E5%91%BD%E4%BB%A4"><span class="toc-text">5.4 systemctl命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-5-systemctl%E7%AE%A1%E7%90%86%E8%84%9A%E6%9C%AC"><span class="toc-text">5.5 systemctl管理脚本</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-1-Unit%E6%AE%B5%E7%9A%84%E5%B8%B8%E7%94%A8%E9%80%89%E9%A1%B9"><span class="toc-text">5.5.1 Unit段的常用选项</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-2-Service%E6%AE%B5%E7%9A%84%E5%B8%B8%E7%94%A8%E9%80%89%E9%A1%B9"><span class="toc-text">5.5.2 Service段的常用选项</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2-1-Type%E7%B1%BB%E5%9E%8B"><span class="toc-text">5.5.2.1 Type类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2-2-Killmode%E7%9A%84%E7%B1%BB%E5%9E%8B"><span class="toc-text">5.5.2.2 Killmode的类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2-3-Restart%E7%B1%BB%E5%9E%8B"><span class="toc-text">5.5.2.3 Restart类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-5-2-4-%E5%90%84%E7%A7%8DExec-%E5%AD%97%E6%AE%B5"><span class="toc-text">5.5.2.4 各种Exec*字段</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-3-Install%E6%AE%B5%E7%9A%84%E5%B8%B8%E7%94%A8%E9%80%89%E9%A1%B9"><span class="toc-text">5.5.3 Install段的常用选项</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-4-%E8%87%AA%E5%AE%9A%E4%B9%89service%E7%9A%84unit%E6%96%87%E4%BB%B6"><span class="toc-text">5.5.4 自定义service的unit文件</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-6-%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E6%96%87%E4%BB%B6"><span class="toc-text">5.6 开机启动文件</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#6-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0%E5%92%8C-proc%E7%9B%AE%E5%BD%95%E7%AE%A1%E7%90%86"><span class="toc-text">6 内核参数和&#x2F;proc目录管理</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/controller/introduce/" title="控制器介绍"><img src="/img/paper1.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="控制器介绍"/></a><div class="content"><a class="title" href="/Kubernetes/controller/introduce/" title="控制器介绍">控制器介绍</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/containerd/" title="基于containerd部署k8s-v1.30"><img src="/img/paper6.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="基于containerd部署k8s-v1.30"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/containerd/" title="基于containerd部署k8s-v1.30">基于containerd部署k8s-v1.30</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/cluster/" title="集群管理指南"><img src="/img/paper3.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="集群管理指南"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/cluster/" title="集群管理指南">集群管理指南</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/docker/" title="基于docker部署k8s-v1.30"><img src="/img/paper5.png" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="基于docker部署k8s-v1.30"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/docker/" title="基于docker部署k8s-v1.30">基于docker部署k8s-v1.30</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/Kubernetes/deploy/explanation/" title="概论"><img src="/img/paper2.jpg" onerror="this.onerror=null;this.src='/img/error-page.png'" alt="概论"/></a><div class="content"><a class="title" href="/Kubernetes/deploy/explanation/" title="概论">概论</a><time datetime="2025-09-21T02:38:40.000Z" title="发表于 2025-09-21 10:38">2025-09-21</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Aquarius</span></div><div class="footer_custom_text"><style>
+div#runtime {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+div#ghbdages_list {
+  height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px
+}
+
+.github-badge {
+  display: flex;
+  align-items: center;
+  margin-inline: 6px;
+}
+</style>
+<div id="runtime"></div>
+<div id="ghbdages"></div>
+<script>
+  function createtime() {
+    const now = new Date();
+    const grt = new Date("08/01/2025 00:00:00"); // 网站诞生时间
+
+    // 计算天、小时、分钟和秒
+    const days = Math.floor((now - grt) / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(((now - grt) / (1000 * 60 * 60)) % 24)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(((now - grt) / (1000 * 60)) % 60)
+      .toString()
+      .padStart(2, "0");
+    const seconds = Math.floor(((now - grt) / 1000) % 60)
+      .toString()
+      .padStart(2, "0");
+
+    // HTML 输出
+    const currentTimeHtml = `
+          <div>
+              本站已运行 ${days} 天 ${hours} 小时 ${minutes} 分 ${seconds} 秒 
+          </div>`;
+
+    const runtime = document.getElementById("runtime");
+    if (runtime) runtime.innerHTML = currentTimeHtml;
+  }
+
+  // 设置每秒调用函数
+  setInterval(createtime, 1000);
+
+  function renderBadge() {
+    const currentTimeHtml = `
+      <div id="ghbdages_list">
+          <a class="github-badge" target="_blank" href="https://hexo.io/" title="hexo:7.3.0">
+              <img src="https://img.shields.io/badge/Frame-Hexo-blue?logo=hexo" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://github.com/" title="github">
+              <img src="https://img.shields.io/badge/Code-GitHub-181717?logo=GitHub&color=%23FF7102" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://vercel.com/" title="vercel">
+              <img src="https://img.shields.io/badge/Host-Vercel-%23F0D722?logo=Vercel" alt="Static Badge">
+          </a>
+          <a class="github-badge" target="_blank" href="https://analytics.sysio.ai/" title="umami">
+              <img src="https://img.shields.io/badge/Analytics-Umami-%237FB100?logo=umami&logoColor=%237FB100" alt="Static Badge">
+          </a>
+      </div>`;
+
+    const ghbdages = document.getElementById("ghbdages");
+    if (ghbdages) {
+      ghbdages.innerHTML = currentTimeHtml;
+    }
+  }
+
+  window.onload = renderBadge;
+</script>
+</div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="translateLink" type="button" title="简繁转换">繁</button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button><button id="go-down" type="button" title="直达底部" onclick="btf.scrollToDest(document.body.scrollHeight, 500)"><i class="fas fa-arrow-down"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/tw_cn.js"></script><script src="https://unpkg.com/@fancyapps/ui/dist/fancybox/fancybox.umd.js"></script><script src="https://unpkg.com/instant.page/instantpage.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const loadMathjax = () => {
+    if (!window.MathJax) {
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          enableMenu: true,
+          renderActions: {
+            findScript: [10, doc => {
+              for (const node of document.querySelectorAll('script[type^="math/tex"]')) {
+                const display = !!node.type.match(/; *mode=display/)
+                const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display)
+                const text = document.createTextNode('')
+                node.parentNode.replaceChild(text, node)
+                math.start = {node: text, delim: '', n: 0}
+                math.end = {node: text, delim: '', n: 0}
+                doc.math.push(math)
+              }
+            }, '']
+          }
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://unpkg.com/mathjax/es5/tex-mml-chtml.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.startup.document.state(0)
+      MathJax.texReset()
+      MathJax.typesetPromise()
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  window.pjax ? loadMathjax() : window.addEventListener('load', loadMathjax)
+})()</script></div><script src="https://cdn.jsdelivr.net/gh/xiabo2/CDN@latest/fishes.js"></script><script defer="defer" id="fluttering_ribbon" mobile="false" src="https://unpkg.com/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章..." type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
